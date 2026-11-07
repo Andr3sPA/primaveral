@@ -50,9 +50,10 @@ export function NavbarClient() {
           <Link
             href="/checkout"
             aria-label="Ver carrito"
-            className="rounded-full p-2 text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
+            className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-stone-700 transition hover:bg-stone-100 hover:text-stone-900"
           >
-            <ShoppingBag className="h-5 w-5" />
+            <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+            <span>Carrito</span>
           </Link>
           {session ? (
             <>
@@ -89,8 +90,9 @@ export function NavbarClient() {
                 variant="ghost"
                 size="icon"
                 className="min-h-11 min-w-11 md:hidden"
+                aria-label="Abrir menú"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent>
@@ -123,7 +125,10 @@ export function NavbarClient() {
                     </button>
                   </>
                 ) : (
-                  <Link href="/user/signin" className="text-lg text-stone-500">
+                  <Link
+                    href="/user/signin"
+                    className="min-h-11 py-2 text-left text-lg text-stone-700"
+                  >
                     Entrar
                   </Link>
                 )}

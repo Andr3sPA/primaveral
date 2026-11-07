@@ -26,9 +26,9 @@ export default function ShoppingCart() {
     <div>
       <button
         onClick={() => setOpen(true)}
-        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform hover:scale-110"
+        className="relative flex min-h-11 min-w-11 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform hover:scale-110"
       >
-        <span className="sr-only">Open cart</span>
+        <span className="sr-only">Abrir carrito</span>
         <ShoppingCartIcon className="h-7 w-7" />
         {getItemCount() > 0 && (
           <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold">
@@ -53,16 +53,15 @@ export default function ShoppingCart() {
                   <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
                     <div className="flex items-start justify-between">
                       <DialogTitle className="text-lg font-medium text-gray-900">
-                        Shopping cart
+                        Tu carrito
                       </DialogTitle>
                       <div className="ml-3 flex h-7 items-center">
                         <button
                           type="button"
                           onClick={() => setOpen(false)}
-                          className="relative -m-2 p-2 text-gray-400 hover:text-gray-500"
+                          className="relative flex min-h-11 min-w-11 items-center justify-center text-gray-600 hover:text-gray-900"
                         >
-                          <span className="absolute -inset-0.5" />
-                          <span className="sr-only">Close panel</span>
+                          <span className="sr-only">Cerrar carrito</span>
                           <XMarkIcon aria-hidden="true" className="size-6" />
                         </button>
                       </div>
@@ -74,10 +73,11 @@ export default function ShoppingCart() {
                           <div className="py-12 text-center">
                             <ShoppingCartIcon className="mx-auto h-12 w-12 text-gray-400" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900">
-                              Your cart is empty
+                              Todavía no tienes productos
                             </h3>
                             <p className="mt-1 text-sm text-gray-500">
-                              Start adding some items to your cart!
+                              Explora la colección y agrega las prendas que te
+                              gusten.
                             </p>
                           </div>
                         ) : (
@@ -119,7 +119,7 @@ export default function ShoppingCart() {
                                     </div>
                                     <p className="mt-1 line-clamp-2 text-sm text-gray-500">
                                       {item.description ??
-                                        "No description available"}
+                                        "Prenda de nuestra colección"}
                                     </p>
                                     {item.fulfillmentType ===
                                       "SOURCED_TO_ORDER" &&
@@ -141,7 +141,7 @@ export default function ShoppingCart() {
                                     <div className="flex">
                                       <button
                                         type="button"
-                                        className="font-medium text-indigo-600 hover:text-indigo-500"
+                                        className="inline-flex min-h-11 items-center px-2 font-medium text-indigo-700 hover:text-indigo-900"
                                         onClick={() =>
                                           removeItem(
                                             item.id,
@@ -150,7 +150,7 @@ export default function ShoppingCart() {
                                           )
                                         }
                                       >
-                                        Remove
+                                        Quitar del carrito
                                       </button>
                                     </div>
                                   </div>
@@ -169,18 +169,19 @@ export default function ShoppingCart() {
                       <p>${getTotalPrice().toFixed(2)}</p>
                     </div>
                     <p className="mt-0.5 text-sm text-gray-500">
-                      Shipping and taxes calculated at checkout.
+                      El envío se calcula al finalizar el pedido.
                     </p>
                     <div className="mt-6">
                       <button
                         disabled={getItemCount() === 0}
-                        className="flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-xs hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                        className="flex min-h-12 w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-xs hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                         onClick={() => {
                           router.push("/checkout");
                           setOpen(false);
                         }}
                       >
-                        Checkout ({getItemCount()} items)
+                        Finalizar pedido ({getItemCount()}{" "}
+                        {getItemCount() === 1 ? "producto" : "productos"})
                       </button>
                     </div>
                     <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
@@ -189,9 +190,9 @@ export default function ShoppingCart() {
                         <button
                           type="button"
                           onClick={() => setOpen(false)}
-                          className="font-medium text-indigo-600 hover:text-indigo-500"
+                          className="inline-flex min-h-11 items-center font-medium text-indigo-700 hover:text-indigo-900"
                         >
-                          Continue Shopping
+                          Seguir comprando
                           <span aria-hidden="true"> &rarr;</span>
                         </button>
                       </p>

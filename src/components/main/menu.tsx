@@ -44,7 +44,9 @@ function ProductCard({ item }: { item: Product }) {
         </div>
         <div className="flex items-start justify-between gap-3 pt-4">
           <div>
-            <h3 className="break-words font-medium text-stone-900">{item.name}</h3>
+            <h3 className="font-medium break-words text-stone-900">
+              {item.name}
+            </h3>
             <p className="mt-1 text-sm text-stone-500">{item.category}</p>
           </div>
           <p className="shrink-0 text-right font-semibold text-stone-900">
@@ -129,7 +131,10 @@ export default function Menu() {
         </div>
       </section>
 
-      <section id="coleccion" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24 lg:px-10">
+      <section
+        id="coleccion"
+        className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24 lg:px-10"
+      >
         <div className="flex flex-col gap-5 border-b border-stone-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm tracking-[0.2em] text-stone-500 uppercase">
@@ -142,10 +147,11 @@ export default function Menu() {
           <label className="flex w-full items-center gap-2 rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-500 sm:w-auto">
             <Search className="h-4 w-4" />
             <input
+              aria-label="Buscar prendas"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar prendas"
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-stone-400 sm:w-36 sm:flex-none"
+              className="min-h-11 min-w-0 flex-1 bg-transparent outline-none placeholder:text-stone-400 sm:w-36 sm:flex-none"
             />
           </label>
         </div>
@@ -154,6 +160,7 @@ export default function Menu() {
             <button
               key={item}
               onClick={() => setCategory(item)}
+              aria-pressed={category === item}
               className={`min-h-11 rounded-full px-4 py-2 text-sm transition ${category === item ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}
             >
               {item}

@@ -43,7 +43,7 @@ export function LoginForm({
         if (!result || result.error || !result.ok) {
           setResponse({
             status: "error",
-            info: "Correo o contraseña incorrectos, o la cuenta todavía no está verificada.",
+            info: "No pudimos iniciar sesión. Revisa tu correo y contraseña. Si no has confirmado tu cuenta, puedes pedir otro correo de confirmación.",
           });
           return;
         }
@@ -80,6 +80,7 @@ export function LoginForm({
             autoComplete="email"
             required
             maxLength={254}
+            className="min-h-11"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
@@ -100,6 +101,7 @@ export function LoginForm({
             autoComplete="current-password"
             required
             maxLength={128}
+            className="min-h-11"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
@@ -135,20 +137,24 @@ export function LoginForm({
             ? "Enviando..."
             : "Reenviar correo de verificación"}
         </Button>
-        <p className="text-center text-sm">
-          ¿Necesitas probar otra dirección?{" "}
+        <p className="text-center text-sm leading-6">
+          ¿No recibiste el correo para confirmar tu cuenta? Puedes corregir tu
+          correo o pedir que te lo enviemos de nuevo.{" "}
           <Link
             href="/user/resend-verification"
-            className="underline underline-offset-4"
+            className="inline-flex min-h-11 items-center font-medium text-stone-900 underline underline-offset-4"
           >
-            Reenviar desde el formulario
+            Corregir correo o reenviar confirmación
           </Link>
         </p>
       </div>
       <div className="text-center text-sm">
         ¿No tienes una cuenta?{" "}
-        <Link href="/user/signup" className="underline underline-offset-4">
-          Regístrate
+        <Link
+          href="/user/signup"
+          className="inline-flex min-h-11 items-center underline underline-offset-4"
+        >
+          Crear cuenta
         </Link>
       </div>
     </form>

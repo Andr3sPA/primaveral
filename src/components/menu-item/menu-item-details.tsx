@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Heart, Ruler, Truck } from "lucide-react";
+import { ArrowRight, Check, Heart, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ImageViewer from "@/components/menu-item/image-viewer-basic";
@@ -170,15 +170,13 @@ function MenuItemDetails({
               <div className="mb-7">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm font-semibold">Talla</p>
-                  <button className="text-muted-foreground flex items-center gap-1 text-xs underline underline-offset-4">
-                    <Ruler className="h-3.5 w-3.5" /> Guía de tallas
-                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {sizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
+                      aria-pressed={selectedSize === size}
                       className={cn(
                         "h-11 min-w-12 rounded-xl border px-4 text-sm transition",
                         selectedSize === size
@@ -206,8 +204,9 @@ function MenuItemDetails({
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
+                      aria-pressed={selectedColor === color}
                       className={cn(
-                        "rounded-full border px-4 py-2 text-sm transition",
+                        "min-h-11 rounded-full border px-4 py-2 text-sm transition",
                         selectedColor === color
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border hover:border-primary",

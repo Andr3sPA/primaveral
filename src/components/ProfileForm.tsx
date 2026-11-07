@@ -82,8 +82,8 @@ export function ProfileForm() {
           Correo electrónico
         </label>
         <Input id="profile-email" value={profile.email} disabled />
-        <p className="text-muted-foreground mt-1 text-xs">
-          El correo se verifica al crear la cuenta y no se cambia desde aquí.
+        <p className="text-muted-foreground mt-1 text-sm leading-6">
+          Confirmamos el correo al crear la cuenta. No puedes cambiarlo aquí.
         </p>
       </div>
       <div>

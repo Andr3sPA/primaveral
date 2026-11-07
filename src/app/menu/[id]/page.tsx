@@ -1,6 +1,7 @@
 // Página de detalles de un elemento del menú. Muestra información detallada del ítem seleccionado.
 import { MenuItemDetails } from "@/components/menu-item/menu-item-details";
 import { api } from "@/trpc/server";
+import Link from "next/link";
 
 export default async function MenuItemPage({
   params,
@@ -19,7 +20,10 @@ export default async function MenuItemPage({
           <MenuItemDetails
             id={item.id}
             title={item.name}
-            description={item.description ?? "No description"}
+            description={
+              item.description ??
+              "Prenda bordada para disfrutar por mucho tiempo."
+            }
             prefix={item.currency}
             price={item.price}
             inStock={item.available && item.stock > 0}
@@ -34,7 +38,18 @@ export default async function MenuItemPage({
         </div>
       ) : (
         // Mensaje si el elemento no se encuentra
-        <div>Item not found</div>
+        <main className="mx-auto max-w-xl px-4 py-16 text-center">
+          <h1 className="text-2xl font-semibold">No encontramos esta prenda</h1>
+          <p className="text-muted-foreground mt-3">
+            Vuelve a la colección para ver las prendas disponibles.
+          </p>
+          <Link
+            href="/#coleccion"
+            className="mt-6 inline-flex min-h-11 items-center rounded-full bg-stone-900 px-6 text-white"
+          >
+            Volver a la colección
+          </Link>
+        </main>
       )}
     </div>
   );

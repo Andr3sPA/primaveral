@@ -17,7 +17,10 @@ export function ResendVerificationForm() {
         resend.mutate({ email });
       }}
     >
-      <label htmlFor="verification-email" className="text-sm font-medium">
+      <label
+        htmlFor="verification-email"
+        className="block text-base font-medium"
+      >
         Correo electrónico
       </label>
       <Input
@@ -26,6 +29,7 @@ export function ResendVerificationForm() {
         autoComplete="email"
         maxLength={254}
         required
+        className="min-h-11"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
@@ -39,8 +43,8 @@ export function ResendVerificationForm() {
           {resend.error.message}
         </p>
       )}
-      <Button type="submit" disabled={resend.isPending}>
-        {resend.isPending ? "Enviando..." : "Reenviar verificación"}
+      <Button type="submit" className="min-h-11" disabled={resend.isPending}>
+        {resend.isPending ? "Enviando..." : "Enviar correo de confirmación"}
       </Button>
     </form>
   );

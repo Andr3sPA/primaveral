@@ -67,19 +67,23 @@ async function sendAccountTokenEmail(
   const displayName = escapeHtml(trimmedName ?? "Hola");
   const isVerification = purpose === "verification";
   const subject = isVerification
-    ? "Verifica tu correo | Primaveral Bordados"
-    : "Restablece tu contraseña | Primaveral Bordados";
+    ? "Confirma tu correo | Primaveral Bordados"
+    : "Cambia tu contraseña | Primaveral Bordados";
   const action = isVerification
-    ? "Verificar mi correo"
-    : "Restablecer contraseña";
-  const textContent = `${displayName}, abre este enlace para ${isVerification ? "verificar tu cuenta" : "cambiar tu contraseña"}: ${actionUrl}`;
+    ? "Confirmar mi correo"
+    : "Cambiar mi contraseña";
+  const expiry = isVerification ? "24 horas" : "1 hora";
+  const requestDescription = isVerification
+    ? "confirmar tu cuenta de Primaveral Bordados"
+    : "cambiar tu contraseña";
+  const textContent = `${displayName}, abre este enlace para ${requestDescription}: ${actionUrl} El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.`;
 
   try {
     await sendBrevoEmail({
       to: email,
       subject,
       textContent,
-      htmlContent: `<p>${displayName},</p><p>${isVerification ? "Verifica tu cuenta de Primaveral Bordados" : "Solicitaste cambiar tu contraseña"}.</p><p><a href="${actionUrl}">${action}</a></p><p>El enlace vence en ${isVerification ? "24 horas" : "1 hora"}. Si no solicitaste esto, ignora este correo.</p>`,
+      htmlContent: `<p>${displayName},</p><p>Abre el enlace para ${requestDescription}.</p><p><a href="${actionUrl}">${action}</a></p><p>El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.</p>`,
     });
   } catch (error) {
     await db.verificationToken.deleteMany({
@@ -294,7 +298,7 @@ export const userRouter = createTRPCRouter({
 
       return {
         message:
-          "Si la cuenta puede registrarse, recibirás un correo para verificarla.",
+          "Si puedes crear una cuenta con ese correo, recibirás un mensaje para confirmarla.",
       };
     }),
   requestEmailVerification: publicProcedure
@@ -313,7 +317,7 @@ export const userRouter = createTRPCRouter({
 
       return {
         message:
-          "Si existe una cuenta pendiente de verificación, recibirás un correo.",
+          "Si tu cuenta está pendiente de confirmación, recibirás un correo.",
       };
     }),
   verifyEmail: publicProcedure
@@ -332,7 +336,8 @@ export const userRouter = createTRPCRouter({
         ) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "El enlace de verificación no es válido o ha vencido.",
+            message:
+              "El enlace para confirmar tu correo no funciona o ya venció.",
           });
         }
 
@@ -346,7 +351,8 @@ export const userRouter = createTRPCRouter({
         if (consumed.count !== 1) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "El enlace de verificación no es válido o ha vencido.",
+            message:
+              "El enlace para confirmar tu correo no funciona o ya venció.",
           });
         }
 
@@ -358,12 +364,15 @@ export const userRouter = createTRPCRouter({
         if (verified.count !== 1) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "El enlace de verificación no es válido o ha vencido.",
+            message:
+              "El enlace para confirmar tu correo no funciona o ya venció.",
           });
         }
       });
 
-      return { message: "Tu correo fue verificado. Ya puedes iniciar sesión." };
+      return {
+        message: "Tu correo quedó confirmado. Ya puedes iniciar sesión.",
+      };
     }),
   requestPasswordReset: publicProcedure
     .input(emailInput)
@@ -380,7 +389,7 @@ export const userRouter = createTRPCRouter({
 
       return {
         message:
-          "Si existe una cuenta verificada con ese correo, recibirás un enlace para restablecer la contraseña.",
+          "Si tienes una cuenta con ese correo, recibirás un enlace para cambiar tu contraseña.",
       };
     }),
   resetPassword: publicProcedure
@@ -406,7 +415,7 @@ export const userRouter = createTRPCRouter({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "El enlace para restablecer la contraseña no es válido o ha vencido.",
+              "El enlace para cambiar tu contraseña no funciona o ya venció.",
           });
         }
 
@@ -421,7 +430,7 @@ export const userRouter = createTRPCRouter({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "El enlace para restablecer la contraseña no es válido o ha vencido.",
+              "El enlace para cambiar tu contraseña no funciona o ya venció.",
           });
         }
 
@@ -434,13 +443,13 @@ export const userRouter = createTRPCRouter({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "El enlace para restablecer la contraseña no es válido o ha vencido.",
+              "El enlace para cambiar tu contraseña no funciona o ya venció.",
           });
         }
       });
 
       return {
-        message: "Tu contraseña fue actualizada. Ya puedes iniciar sesión.",
+        message: "Cambiamos tu contraseña. Ya puedes iniciar sesión.",
       };
     }),
 });

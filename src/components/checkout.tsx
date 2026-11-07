@@ -1,14 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  CreditCard,
-  Loader2,
-  LockKeyhole,
-  Minus,
-  Plus,
-  WalletCards,
-} from "lucide-react";
+import { Loader2, LockKeyhole, Minus, Plus, WalletCards } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -42,7 +35,7 @@ const schema = z.object({
   municipality: z.string().trim().min(2, "Indica el municipio").max(100),
   department: z.string().trim().min(2, "Indica el departamento").max(100),
   phone: z.string().trim().max(30).optional(),
-  paymentMethod: z.enum(["credit-card", "cash"]),
+  paymentMethod: z.literal("cash"),
 });
 
 type CheckoutValues = z.infer<typeof schema>;
@@ -214,6 +207,7 @@ export function Checkout() {
                               placeholder="tu@correo.com"
                               required
                               maxLength={254}
+                              className="min-h-11"
                             />
                           </FormControl>
                           <FormMessage />
@@ -231,6 +225,7 @@ export function Checkout() {
                               {...field}
                               autoComplete="name"
                               maxLength={100}
+                              className="min-h-11"
                             />
                           </FormControl>
                           <FormMessage />
@@ -284,6 +279,7 @@ export function Checkout() {
                           placeholder="Calle, carrera, número, barrio"
                           readOnly={isAuthenticated && addressMode === "saved"}
                           maxLength={250}
+                          className="min-h-24"
                         />
                       </FormControl>
                       <FormMessage />
@@ -306,6 +302,7 @@ export function Checkout() {
                               isAuthenticated && addressMode === "saved"
                             }
                             maxLength={100}
+                            className="min-h-11"
                           />
                         </FormControl>
                         <FormMessage />
@@ -327,6 +324,7 @@ export function Checkout() {
                               isAuthenticated && addressMode === "saved"
                             }
                             maxLength={100}
+                            className="min-h-11"
                           />
                         </FormControl>
                         <FormMessage />
@@ -348,6 +346,7 @@ export function Checkout() {
                           placeholder="+57 300 000 0000"
                           readOnly={isAuthenticated && addressMode === "saved"}
                           maxLength={30}
+                          className="min-h-11"
                         />
                       </FormControl>
                       <FormMessage />
@@ -367,36 +366,16 @@ export function Checkout() {
                     Guardar esta dirección en mi perfil
                   </label>
                 )}
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Preferencia de pago</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          className="grid gap-3 sm:grid-cols-2"
-                        >
-                          <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
-                            <RadioGroupItem value="cash" />
-                            <WalletCards className="h-5 w-5 text-stone-500" />
-                            <span className="text-sm">Contraentrega</span>
-                          </label>
-                          <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
-                            <RadioGroupItem value="credit-card" />
-                            <CreditCard className="h-5 w-5 text-stone-500" />
-                            <span className="text-sm">
-                              Tarjeta (próximamente)
-                            </span>
-                          </label>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="rounded-xl border border-stone-200 p-4">
+                  <p className="text-base font-medium">Forma de pago</p>
+                  <p className="mt-2 flex items-center gap-2 text-stone-700">
+                    <WalletCards
+                      className="h-5 w-5 shrink-0 text-stone-500"
+                      aria-hidden="true"
+                    />
+                    Pago al recibir el pedido
+                  </p>
+                </div>
                 {profileQuery.error && (
                   <p
                     role="alert"
@@ -421,7 +400,7 @@ export function Checkout() {
                     !items.length ||
                     (isAuthenticated && profileQuery.isLoading)
                   }
-                  className="w-full rounded-full"
+                  className="min-h-12 w-full rounded-full"
                 >
                   {createOrder.isPending ? (
                     <Loader2 className="animate-spin" />
@@ -481,11 +460,11 @@ export function Checkout() {
                             item.color,
                           )
                         }
-                        className="grid min-h-9 min-w-9 place-items-center rounded-full border p-1"
+                        className="grid min-h-11 min-w-11 place-items-center rounded-full border p-1"
                       >
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="text-xs">{item.quantity}</span>
+                      <span className="text-base">{item.quantity}</span>
                       <button
                         type="button"
                         aria-label={`Agregar una unidad de ${item.title}`}
@@ -497,7 +476,7 @@ export function Checkout() {
                             item.color,
                           )
                         }
-                        className="grid min-h-9 min-w-9 place-items-center rounded-full border p-1"
+                        className="grid min-h-11 min-w-11 place-items-center rounded-full border p-1"
                       >
                         <Plus className="h-3 w-3" />
                       </button>
@@ -506,7 +485,7 @@ export function Checkout() {
                         onClick={() =>
                           removeItem(item.id, item.size, item.color)
                         }
-                        className="ml-2 text-xs text-stone-400 hover:text-red-600"
+                        className="ml-2 inline-flex min-h-11 items-center px-2 text-sm text-stone-600 hover:text-red-700"
                       >
                         Quitar
                       </button>
