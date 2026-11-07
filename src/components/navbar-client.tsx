@@ -25,7 +25,7 @@ export function NavbarClient() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-[#faf9f7]/90 backdrop-blur">
-      <div className="mx-auto flex h-20 min-w-0 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+      <div className="mx-auto flex h-20 max-w-7xl min-w-0 items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
         <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-stone-900 text-sm font-semibold text-white">
             PB
@@ -55,14 +55,24 @@ export function NavbarClient() {
             <ShoppingBag className="h-5 w-5" />
           </Link>
           {session ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="hidden sm:inline-flex"
-            >
-              Salir
-            </Button>
+            <>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
+              >
+                <Link href="/user/profile">Mi perfil</Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="hidden sm:inline-flex"
+              >
+                Salir
+              </Button>
+            </>
           ) : (
             <Button
               asChild
@@ -75,7 +85,11 @@ export function NavbarClient() {
           )}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="min-h-11 min-w-11 md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-11 min-w-11 md:hidden"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -94,12 +108,20 @@ export function NavbarClient() {
                   </Link>
                 ))}
                 {session ? (
-                  <button
-                    className="min-h-11 py-2 text-left text-lg text-stone-500"
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                  >
-                    Cerrar sesión
-                  </button>
+                  <>
+                    <Link
+                      href="/user/profile"
+                      className="min-h-11 py-2 text-left text-lg text-stone-500"
+                    >
+                      Mi perfil
+                    </Link>
+                    <button
+                      className="min-h-11 py-2 text-left text-lg text-stone-500"
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                    >
+                      Cerrar sesión
+                    </button>
+                  </>
                 ) : (
                   <Link href="/user/signin" className="text-lg text-stone-500">
                     Entrar

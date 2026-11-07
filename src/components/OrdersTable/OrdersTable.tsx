@@ -18,7 +18,9 @@ import { toast } from "sonner";
 
 interface Order {
   id: string;
-  userId: string;
+  userId: string | null;
+  guestName: string | null;
+  guestEmail: string | null;
   status: OrderStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -28,7 +30,7 @@ interface Order {
   user: {
     name: string | null;
     email: string;
-  };
+  } | null;
 }
 
 export function OrdersTable() {
@@ -120,14 +122,19 @@ export function OrdersTable() {
       },
       {
         id: "userName",
-        accessorFn: (row) => row.user.name ?? row.user.email,
+        accessorFn: (row) =>
+          row.user?.name ??
+          row.guestName ??
+          row.user?.email ??
+          row.guestEmail ??
+          "Invitado",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="Cliente" />
         ),
         cell: ({ row }) => (
           <OrderUserCell
-            name={row.original.user.name}
-            email={row.original.user.email}
+            name={row.original.user?.name ?? row.original.guestName}
+            email={row.original.user?.email ?? row.original.guestEmail ?? ""}
           />
         ),
         meta: {

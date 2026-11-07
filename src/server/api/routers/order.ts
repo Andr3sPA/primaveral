@@ -4,11 +4,11 @@ import { TRPCError } from "@trpc/server";
 import {
   adminProcedure,
   createTRPCRouter,
-  protectedProcedure,
+  publicProcedure,
 } from "@/server/api/trpc";
 
 export const orderRouter = createTRPCRouter({
-  createNew: protectedProcedure
+  createNew: publicProcedure
     .input(
       z.object({
         items: z
@@ -22,9 +22,31 @@ export const orderRouter = createTRPCRouter({
         address: z.string().trim().min(8).max(250),
         phone: z.string().trim().min(7).max(30),
         paymentMethod: z.enum(["credit-card", "cash"]),
+        guestName: z.string().trim().min(1).max(100).optional(),
+        guestEmail: z.string().trim().email().max(254).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session?.user.id;
+      if (!userId && (!input.guestName || !input.guestEmail)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Indica tu nombre y correo para continuar como invitado.",
+        });
+      }
+      if (userId) {
+        const user = await ctx.db.user.findUnique({
+          where: { id: userId },
+          select: { emailVerified: true },
+        });
+        if (!user?.emailVerified) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Verifica tu correo antes de realizar un pedido.",
+          });
+        }
+      }
+
       const ids = input.items.map((item) => item.productId);
       const products = await ctx.db.menuItem.findMany({
         where: { id: { in: ids }, available: true },
@@ -69,7 +91,9 @@ export const orderRouter = createTRPCRouter({
         }
         return tx.order.create({
           data: {
-            userId: ctx.session.user.id,
+            userId,
+            guestName: userId ? undefined : input.guestName,
+            guestEmail: userId ? undefined : input.guestEmail?.toLowerCase(),
             address: input.address,
             phone: input.phone,
             total,

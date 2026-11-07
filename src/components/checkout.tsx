@@ -10,10 +10,11 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
 import { api } from "@/trpc/react";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "./ui/button";
@@ -30,14 +31,10 @@ import { Input } from "./ui/input";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Textarea } from "./ui/textarea";
 
-const schema = z.object({
-  address: z.string().min(8, "Indica una dirección completa"),
-  phone: z.string().min(7, "Indica un teléfono válido"),
-  paymentMethod: z.enum(["credit-card", "cash"]),
-});
-
 export function Checkout() {
   const router = useRouter();
+  const { status } = useSession();
+  const isSignedIn = status === "authenticated";
   const {
     items,
     isHydrated,
@@ -46,9 +43,31 @@ export function Checkout() {
     updateQuantity,
     removeItem,
   } = useCart();
+  const profile = api.user.getProfile.useQuery(undefined, {
+    enabled: isSignedIn,
+  });
+  const schema = useMemo(
+    () =>
+      z.object({
+        address: z.string().trim().min(8, "Indica una dirección completa"),
+        phone: z.string().trim().min(7, "Indica un teléfono válido"),
+        paymentMethod: z.enum(["credit-card", "cash"]),
+        guestName: isSignedIn
+          ? z.string().optional()
+          : z.string().trim().min(1, "Indica tu nombre"),
+        guestEmail: isSignedIn
+          ? z.string().optional()
+          : z.string().trim().email("Indica un correo válido"),
+      }),
+    [isSignedIn],
+  );
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { paymentMethod: "cash" },
+    defaultValues: {
+      paymentMethod: "cash",
+      guestName: "",
+      guestEmail: "",
+    },
   });
   const createOrder = api.order.createNew.useMutation({
     onSuccess: () => {
@@ -56,6 +75,19 @@ export function Checkout() {
     },
   });
   const subtotal = getTotalPrice();
+  const { getValues, reset } = form;
+
+  useEffect(() => {
+    if (profile.data && !form.formState.isDirty) {
+      reset({
+        ...getValues(),
+        guestName: profile.data.name ?? "",
+        guestEmail: profile.data.email,
+        phone: profile.data.phone ?? "",
+        address: profile.data.address ?? "",
+      });
+    }
+  }, [form.formState.isDirty, getValues, profile.data, reset]);
 
   useEffect(() => {
     if (isHydrated && !items.length && !createOrder.isSuccess)
@@ -66,6 +98,14 @@ export function Checkout() {
     return (
       <main className="mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
         Cargando tu carrito...
+      </main>
+    );
+  }
+
+  if (status === "loading") {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
+        Cargando tus datos...
       </main>
     );
   }
@@ -107,7 +147,15 @@ export function Checkout() {
               <form
                 onSubmit={form.handleSubmit((values) =>
                   createOrder.mutate({
-                    ...values,
+                    address: values.address,
+                    phone: values.phone,
+                    paymentMethod: values.paymentMethod,
+                    ...(!isSignedIn
+                      ? {
+                          guestName: values.guestName,
+                          guestEmail: values.guestEmail,
+                        }
+                      : {}),
                     items: items.map((item) => ({
                       productId: item.id,
                       quantity: item.quantity,
@@ -116,6 +164,45 @@ export function Checkout() {
                 )}
                 className="space-y-6"
               >
+                {!isSignedIn && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="guestName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre completo</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              autoComplete="name"
+                              placeholder="Tu nombre"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="guestEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Correo electrónico</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              autoComplete="email"
+                              placeholder="tu@correo.com"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
                 <FormField
                   control={form.control}
                   name="address"

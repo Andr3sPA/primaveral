@@ -66,23 +66,23 @@ model VerificationToken {
 
 // Tabla de elementos del menú
 model MenuItem {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  currency    String     @default("$")
-  price       Float
-  available   Boolean    @default(true)
-  category    String     @default("Novedades")
-  sizes       String[]   @default([])
-  colors      String[]   @default([])
-  stock       Int        @default(0)
-  featured    Boolean    @default(false)
+  id              String     @id @default(cuid())
+  name            String
+  description     String?
+  currency        String     @default("$")
+  price           Float
+  available       Boolean    @default(true)
+  category        String     @default("Novedades")
+  sizes           String[]   @default([])
+  colors          String[]   @default([])
+  stock           Int        @default(0)
+  featured        Boolean    @default(false)
   fulfillmentType FulfillmentType @default(READY_TO_SHIP)
-  leadTimeDays Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  image       String?
-  orderItems  OrderItem[]
+  leadTimeDays Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  image        String?
+  orderItems   OrderItem[]
 }
 
 enum FulfillmentType {
@@ -92,17 +92,19 @@ enum FulfillmentType {
 
 // Tabla de órdenes de los clientes
 model Order {
-  id          String       @id @default(cuid())
-  userId      String
-  user        User         @relation("UserOrders", fields: [userId], references: [id])
-  status      OrderStatus  @default(PENDING)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  total       Float
-  phone       String
-  address     String
-  orderItems  OrderItem[]
-  payment     Payment?
+  id         String      @id @default(cuid())
+  userId     String?
+  user       User?       @relation("UserOrders", fields: [userId], references: [id])
+  guestName  String?
+  guestEmail String?
+  status     OrderStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  total      Float
+  phone      String
+  address    String
+  orderItems OrderItem[]
+  payment    Payment?
 }
 
 // Estado de una orden
