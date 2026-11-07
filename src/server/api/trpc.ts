@@ -133,8 +133,15 @@ export const protectedProcedure = t.procedure
   });
 export const adminProcedure = t.procedure
   .use(timingMiddleware)
-  .use(({ ctx, next }) => {
-    if (!ctx.session?.user || ctx.session.user.role !== "ADMIN") {
+  .use(async ({ ctx, next }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: { role: true },
+    });
+    if (user?.role !== "ADMIN") {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
     return next({

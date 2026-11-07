@@ -1,13 +1,21 @@
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth";
+import { db } from "@/server/db";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (session?.user.role !== "ADMIN" && session?.user.role !== "EMPLOYEE") {
+  if (!session?.user) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (user?.role !== "ADMIN" && user?.role !== "EMPLOYEE") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

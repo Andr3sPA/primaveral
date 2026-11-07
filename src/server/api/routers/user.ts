@@ -5,8 +5,10 @@ import {
   createTRPCRouter,
   publicProcedure,
 } from "@/server/api/trpc";
-import { TRPCError } from "@trpc/server";
 import { Role } from "@prisma/client";
+
+const DUMMY_PASSWORD_HASH =
+  "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 export const userRouter = createTRPCRouter({
   authenticateUser: publicProcedure
@@ -17,24 +19,16 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      let userFromDb;
-      try {
-        userFromDb = await ctx.db.user.findUniqueOrThrow({
-          where: { email: input.email.toLowerCase() },
-        });
-      } catch {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User not found.",
-        });
-      }
-
+      const userFromDb = await ctx.db.user.findUnique({
+        where: { email: input.email.toLowerCase() },
+        select: { id: true, email: true, name: true, role: true, password: true },
+      });
       const isPasswordValid = await bcrypt.compare(
         input.password,
-        userFromDb.password,
+        userFromDb?.password ?? DUMMY_PASSWORD_HASH,
       );
-      if (!isPasswordValid) {
-        return null; // Incorrect password
+      if (!userFromDb || !isPasswordValid) {
+        return null;
       }
 
       return {
@@ -81,6 +75,12 @@ export const userRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return ctx.db.user.delete({
         where: { id: input.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
       });
     }),
   registerUser: publicProcedure
@@ -116,6 +116,12 @@ export const userRouter = createTRPCRouter({
           name: input.name.trim(),
           email: input.email.toLowerCase(),
           password: await bcrypt.hash(input.password, 10),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
         },
       });
     }),
