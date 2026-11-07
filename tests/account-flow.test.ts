@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import type { PrismaClient, Role } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import {
   getPublicErrorMessage,
   getSafeErrorMetadata,
@@ -31,7 +32,10 @@ type TestUser = {
   role: Role;
 };
 
-function createMemoryDatabase() {
+function createMemoryDatabase(
+  options: { userAddressColumnsPresent?: boolean } = {},
+) {
+  const userAddressColumnsPresent = options.userAddressColumnsPresent ?? true;
   const users = new Map<string, TestUser>();
   const verificationTokens: Array<{
     identifier: string;
@@ -58,14 +62,28 @@ function createMemoryDatabase() {
     user: {
       findUnique: async ({
         where,
+        select,
       }: {
         where: { email?: string; id?: string };
-      }) =>
-        [...users.values()].find(
-          (user) =>
-            (where.email !== undefined && user.email === where.email) ||
-            (where.id !== undefined && user.id === where.id),
-        ) ?? null,
+        select?: Partial<Record<keyof TestUser, boolean>>;
+      }) => {
+        if (
+          !userAddressColumnsPresent &&
+          (!select || "municipality" in select || "department" in select)
+        ) {
+          throw Object.assign(
+            new Error('The column "User.municipality" does not exist.'),
+            { code: "P2022" },
+          );
+        }
+        return (
+          [...users.values()].find(
+            (user) =>
+              (where.email !== undefined && user.email === where.email) ||
+              (where.id !== undefined && user.id === where.id),
+          ) ?? null
+        );
+      },
       findUniqueOrThrow: async ({ where }: { where: { id: string } }) => {
         const user = [...users.values()].find(
           (candidate) => candidate.id === where.id,
@@ -75,9 +93,20 @@ function createMemoryDatabase() {
       },
       create: async ({
         data,
+        select,
       }: {
         data: Partial<TestUser> & { email: string };
+        select?: Partial<Record<keyof TestUser, boolean>>;
       }) => {
+        if (
+          !userAddressColumnsPresent &&
+          (!select || "municipality" in select || "department" in select)
+        ) {
+          throw Object.assign(
+            new Error('The column "User.municipality" does not exist.'),
+            { code: "P2022" },
+          );
+        }
         const user: TestUser = {
           id: `user-${nextUserId++}`,
           email: data.email,
@@ -259,6 +288,13 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(sentEmails.length, 1);
     assert.equal(sentEmails[0]?.to[0]?.email, email);
     const user = users.get(email)!;
+    await caller.user.registerUser({ email, password });
+    assert.equal(users.size, 1, "duplicate registration keeps the same user");
+    assert.equal(
+      sentEmails.length,
+      1,
+      "duplicate registration respects cooldown",
+    );
 
     await assert.rejects(
       caller.user.verifyEmail({ token: "invalid-token" }),
@@ -373,6 +409,54 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(registeredOrder.userId, user.id);
     assert.equal(user.municipality, "Bogotá");
     assert.equal(orders.length, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("registration succeeds when legacy User address columns are absent", async () => {
+  const { database, users } = createMemoryDatabase({
+    userAddressColumnsPresent: false,
+  });
+  const sentEmails: Array<{ to: Array<{ email: string }> }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    sentEmails.push(
+      JSON.parse(String(init?.body)) as (typeof sentEmails)[number],
+    );
+    return new Response(null, { status: 201 });
+  };
+
+  try {
+    const caller = createCaller(createContext(database));
+    const email = "schema-drift@example.test";
+    await assert.rejects(
+      caller.user.registerUser({
+        email: "invalid-email",
+        password: "TestPassword1!",
+      }),
+      (error: unknown) =>
+        error instanceof TRPCError &&
+        getPublicErrorMessage({
+          code: error.code,
+          message: error.message,
+          cause: error.cause,
+        }) === "Revisa los datos ingresados e inténtalo de nuevo.",
+    );
+    await assert.rejects(
+      database.user.findUnique({ where: { email } }),
+      (error: unknown) => getSafeErrorMetadata(error).errorCode === "P2022",
+    );
+
+    const result = await caller.user.registerUser({
+      email,
+      password: "TestPassword1!",
+    });
+
+    assert.match(result.message, /recibirás un mensaje/i);
+    assert.equal(users.get(email)?.emailVerified, null);
+    assert.equal(sentEmails.length, 1);
+    assert.equal(sentEmails[0]?.to[0]?.email, email);
   } finally {
     globalThis.fetch = originalFetch;
   }

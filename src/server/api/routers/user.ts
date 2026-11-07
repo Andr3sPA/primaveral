@@ -260,7 +260,16 @@ export const userRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const email = input.email.toLowerCase();
-      let existingUser = await ctx.db.user.findUnique({ where: { email } });
+      const registrationUserSelect = {
+        id: true,
+        email: true,
+        emailVerified: true,
+        name: true,
+      } as const;
+      let existingUser = await ctx.db.user.findUnique({
+        where: { email },
+        select: registrationUserSelect,
+      });
 
       if (!existingUser) {
         try {
@@ -271,13 +280,17 @@ export const userRouter = createTRPCRouter({
               email,
               password: await bcrypt.hash(input.password, 10),
             },
+            select: registrationUserSelect,
           });
         } catch (error) {
           if (
             error instanceof Prisma.PrismaClientKnownRequestError &&
             error.code === "P2002"
           ) {
-            existingUser = await ctx.db.user.findUnique({ where: { email } });
+            existingUser = await ctx.db.user.findUnique({
+              where: { email },
+              select: registrationUserSelect,
+            });
           } else {
             throw error;
           }
@@ -306,7 +319,10 @@ export const userRouter = createTRPCRouter({
     .input(emailInput)
     .mutation(async ({ ctx, input }) => {
       const email = input.email.toLowerCase();
-      const user = await ctx.db.user.findUnique({ where: { email } });
+      const user = await ctx.db.user.findUnique({
+        where: { email },
+        select: { name: true, emailVerified: true },
+      });
 
       if (
         user &&
@@ -379,7 +395,10 @@ export const userRouter = createTRPCRouter({
     .input(emailInput)
     .mutation(async ({ ctx, input }) => {
       const email = input.email.toLowerCase();
-      const user = await ctx.db.user.findUnique({ where: { email } });
+      const user = await ctx.db.user.findUnique({
+        where: { email },
+        select: { name: true, emailVerified: true },
+      });
 
       if (
         user?.emailVerified &&

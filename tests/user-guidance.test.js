@@ -45,6 +45,8 @@ test("registration fields have visible labels and readable password guidance", a
   assert.match(source, /htmlFor="signup-password"/);
   assert.match(source, /aria-describedby="signup-password-help"/);
   assert.match(source, /signup-password-help[\s\S]*text-sm leading-6/);
+  assert.match(source, /register\.error &&/);
+  assert.match(source, /<p role="alert"[\s\S]*\{register\.error\.message\}/);
 });
 
 test("checkout only offers a working payment method", async () => {

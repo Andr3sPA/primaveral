@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { type NextRequest } from "next/server";
 
@@ -15,19 +16,25 @@ const createContext = async (req: NextRequest) => {
   });
 };
 
-const handler = (req: NextRequest) =>
-  fetchRequestHandler({
+const handler = (req: NextRequest) => {
+  const requestId = randomUUID();
+  return fetchRequestHandler({
     endpoint: "/api/trpc",
     req,
     router: appRouter,
     createContext: () => createContext(req),
+    responseMeta: () => ({
+      headers: { "x-request-id": requestId },
+    }),
     onError: ({ path, error }) => {
       console.error("tRPC request failed", {
+        requestId,
         path: path ?? "<no-path>",
         code: error.code,
         ...getSafeErrorMetadata(error.cause ?? error),
       });
     },
   });
+};
 
 export { handler as GET, handler as POST };
