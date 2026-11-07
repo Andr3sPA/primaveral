@@ -63,14 +63,13 @@ npm run dev
 ```
 
 `npm run db:push` sirve solo para crear o sincronizar una base local aislada;
-nunca lo ejecutes contra producción. El repositorio no tiene una migración
-inicial, así que las migraciones incrementales requieren que las tablas
-existentes ya estén creadas. En Vercel, `vercel-build` aplica
-`prisma migrate deploy` únicamente en el entorno **Production**, antes de
-compilar. Configura Preview con una base de pruebas separada y aplica sus
-migraciones antes de probar esa versión. La migración de reparación agrega de
-forma segura las columnas opcionales de municipio y departamento si faltan,
-sin borrar datos.
+nunca lo ejecutes contra producción. El repositorio aún no tiene una
+migración inicial: las dos migraciones existentes son incrementales. El
+comando `vercel-build` solo compila y nunca modifica la base de datos. Antes de
+ejecutar `npm run db:migrate` contra Neon, sigue la guía de [baseline y
+migraciones de Prisma](docs/prisma-neon-migrations.es.md), que exige respaldo,
+comparación del esquema y un baseline explícito. Usa una base separada para
+Preview y valida allí las migraciones primero.
 
 El inicio de sesión y los pedidos autenticados requieren un correo verificado.
 Los enlaces de verificación vencen en 24 horas y los de restablecimiento en una

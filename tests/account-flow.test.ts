@@ -6,7 +6,7 @@ import {
   getPublicErrorMessage,
   getSafeErrorMetadata,
 } from "../src/server/api/error-messages";
-import { shouldRunProductionMigrations } from "../scripts/vercel-build.mjs";
+import { runVercelBuild } from "../scripts/vercel-build.mjs";
 import { z } from "zod";
 
 process.env.DATABASE_URL =
@@ -378,8 +378,8 @@ test("the complete account and checkout flow works with an in-memory database an
   }
 });
 
-test("schema repair and production-only migration deployment are guarded", async () => {
-  const [schema, repair, packageJson] = await Promise.all([
+test("schema repair exists and Vercel build never connects to or migrates the database", async () => {
+  const [schema, repair, packageJson, vercelBuild] = await Promise.all([
     readFile(new URL("../prisma/schema.prisma", import.meta.url), "utf8"),
     readFile(
       new URL(
@@ -389,6 +389,7 @@ test("schema repair and production-only migration deployment are guarded", async
       "utf8",
     ),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/vercel-build.mjs", import.meta.url), "utf8"),
   ]);
 
   assert.match(schema, /municipality\s+String\?/);
@@ -404,15 +405,10 @@ test("schema repair and production-only migration deployment are guarded", async
     packageJson,
     /"vercel-build": "node scripts\/vercel-build\.mjs"/,
   );
-  assert.equal(
-    shouldRunProductionMigrations({ VERCEL: "1", VERCEL_ENV: "production" }),
-    true,
-  );
-  assert.equal(
-    shouldRunProductionMigrations({ VERCEL: "1", VERCEL_ENV: "preview" }),
-    false,
-  );
-  assert.equal(shouldRunProductionMigrations({}), false);
+  assert.doesNotMatch(vercelBuild, /db:migrate|migrate deploy|DATABASE_URL/);
+  const commands: Array<[string, string[]]> = [];
+  runVercelBuild((command, args) => commands.push([command, args]));
+  assert.deepEqual(commands, [["npm", ["run", "build"]]]);
 });
 
 test("public errors are Spanish and internal diagnostics omit raw details", () => {
