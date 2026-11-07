@@ -26,7 +26,10 @@ export function NavbarClient() {
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-[#faf9f7]/90 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-7xl min-w-0 items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
-        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <Link
+          href="/"
+          className="flex min-h-11 min-w-0 items-center gap-2 sm:gap-3"
+        >
           <span className="grid h-9 w-9 place-items-center rounded-full bg-stone-900 text-sm font-semibold text-white">
             PB
           </span>
@@ -35,12 +38,15 @@ export function NavbarClient() {
             <span className="text-muted-foreground font-normal">Bordados</span>
           </span>
         </Link>
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav
+          aria-label="Navegación principal"
+          className="hidden items-center gap-7 md:flex"
+        >
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`text-sm transition hover:text-stone-900 ${pathname === link.href ? "font-medium text-stone-900" : "text-stone-500"}`}
+              className={`flex min-h-11 items-center text-base transition hover:text-stone-900 ${pathname === link.href ? "font-medium text-stone-900" : "text-stone-700"}`}
             >
               {link.label}
             </Link>
@@ -61,7 +67,7 @@ export function NavbarClient() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden sm:inline-flex"
+                className="hidden min-h-11 px-3 text-base sm:inline-flex"
               >
                 <Link href="/user/profile">Mi perfil</Link>
               </Button>
@@ -69,9 +75,9 @@ export function NavbarClient() {
                 variant="ghost"
                 size="sm"
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="hidden sm:inline-flex"
+                className="hidden min-h-11 px-3 text-base sm:inline-flex"
               >
-                Salir
+                Cerrar sesión
               </Button>
             </>
           ) : (
@@ -79,9 +85,9 @@ export function NavbarClient() {
               asChild
               variant="ghost"
               size="sm"
-              className="hidden sm:inline-flex"
+              className="hidden min-h-11 px-3 text-base sm:inline-flex"
             >
-              <Link href="/user/signin">Entrar</Link>
+              <Link href="/user/signin">Iniciar sesión</Link>
             </Button>
           )}
           <Sheet>
@@ -99,7 +105,10 @@ export function NavbarClient() {
               <SheetHeader>
                 <SheetTitle>Primaveral Bordados</SheetTitle>
               </SheetHeader>
-              <div className="mt-8 flex flex-col gap-5">
+              <nav
+                aria-label="Navegación principal"
+                className="mt-8 flex flex-col gap-5"
+              >
                 {links.map((link) => (
                   <Link
                     key={link.href}
@@ -118,7 +127,7 @@ export function NavbarClient() {
                       Mi perfil
                     </Link>
                     <button
-                      className="min-h-11 py-2 text-left text-lg text-stone-500"
+                      className="min-h-11 py-2 text-left text-lg text-stone-700"
                       onClick={() => signOut({ callbackUrl: "/" })}
                     >
                       Cerrar sesión
@@ -129,10 +138,10 @@ export function NavbarClient() {
                     href="/user/signin"
                     className="min-h-11 py-2 text-left text-lg text-stone-700"
                   >
-                    Entrar
+                    Iniciar sesión
                   </Link>
                 )}
-              </div>
+              </nav>
             </SheetContent>
           </Sheet>
         </div>

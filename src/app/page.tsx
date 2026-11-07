@@ -2,11 +2,5 @@
 import Menu from "@/components/main/menu";
 
 export default async function Home() {
-
-  // Renderiza la página principal con menú y saludo
-  return (
-    <main className="min-w-0">
-      <Menu />
-    </main>
-  );
+  return <Menu />;
 }
