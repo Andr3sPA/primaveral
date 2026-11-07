@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String
+  image         String?
+  role          Role      @default(CLIENT)
+  phone         String?
+  address       String?
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]   @relation("UserOrders")
+}
+
+// Enum para distinguir roles de usuario
+enum Role {
+  CLIENT
+  EMPLOYEE
+  ADMIN
+}
+
+model Account {
+  id                        String  @id @default(cuid())
+  userId                    String
+  type                      String
+  provider                  String
+  providerAccountId         String
+  refresh_token             String?
+  access_token              String?
+  expires_at                Int?
+  token_type                String?
+  scope                     String?
+  id_token                  String?
+  session_state             String?
+  refresh_token_expires_in  Int?
+  user                      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Tabla de elementos del menú
+model MenuItem {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  currency    String     @default("$")
+  price       Float
+  available   Boolean    @default(true)
+  category    String     @default("Novedades")
+  sizes       String[]   @default([])
+  colors      String[]   @default([])
+  stock       Int        @default(0)
+  featured    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  image       String?
+  orderItems  OrderItem[]
+}
+
+// Tabla de órdenes de los clientes
+model Order {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation("UserOrders", fields: [userId], references: [id])
+  status      OrderStatus  @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  total       Float
+  phone       String
+  address     String
+  orderItems  OrderItem[]
+  payment     Payment?
+}
+
+// Estado de una orden
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+// Detalles de cada ítem pedido
+model OrderItem {
+  id         String    @id @default(cuid())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id])
+  menuItemId String
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  subtotal   Float
+}
+
+// Información de pagos
+model Payment {
+  id         String   @id @default(cuid())
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id])
+  method     String   // Ej: CASH, CARD
+  status     String   // Ej: PAID, PENDING, FAILED
+  amount     Float
+  createdAt  DateTime @default(now())
+}
+
+// Inventario de insumos
+model InventoryItem {
+  id         String   @id @default(cuid())
+  name       String
+  quantity   Int
+  unit       String   // Ej: "kg", "units"
+  threshold  Int      // Nivel mínimo antes de alerta de stock
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
