@@ -19,10 +19,20 @@ Crea `.env` en la raíz y nunca lo subas al repositorio:
 ```env
 DATABASE_URL="postgresql://..."
 AUTH_SECRET="genera-un-secreto-largo-y-aleatorio"
+CLOUDINARY_URL="cloudinary://api-key:api-secret@cloud-name"
 NODE_ENV="development"
 ```
 
-En Vercel configura las mismas variables para `Production`, `Preview` y `Development`. `DIRECT_URL` ya no es necesaria: Prisma usa `DATABASE_URL` para esta base Neon.
+En Vercel configura `DATABASE_URL`, `AUTH_SECRET` y `CLOUDINARY_URL` para
+`Production`, `Preview` y `Development`. La integración de Prisma puede crear
+también `PRISMA_DATABASE_URL`, `POSTGRES_URL` y `DATABASE_URL_POOLED`; no es
+necesario usarlas en el código actual. `DATABASE_URL` debe apuntar a la base
+Neon que usa este proyecto. `DIRECT_URL` no es necesaria.
+
+Las imágenes del panel administrativo se suben mediante `/api/upload`, pasan
+por Cloudinary en el servidor y solo se guarda en Neon la URL `secure_url`.
+Nunca se suben credenciales al navegador ni se guardan imágenes dentro del
+repositorio. El endpoint acepta únicamente JPG, PNG y WebP de hasta 8 MB.
 
 La credencial de Neon compartida durante la configuración debe considerarse expuesta y rotarse antes de desplegar.
 

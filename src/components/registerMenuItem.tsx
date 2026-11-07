@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
@@ -31,6 +32,8 @@ const schema = z.object({
 });
 
 export default function RegisterMenuItem() {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -52,7 +55,34 @@ export default function RegisterMenuItem() {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((values) =>
+        onSubmit={form.handleSubmit(async (values) => {
+          let image = values.image || undefined;
+          if (imageFile) {
+            setIsUploading(true);
+            try {
+              const body = new FormData();
+              body.append("file", imageFile);
+              const response = await fetch("/api/upload", {
+                method: "POST",
+                body,
+              });
+              const result = (await response.json()) as {
+                url?: string;
+                error?: string;
+              };
+              if (!response.ok || !result.url) {
+                throw new Error(result.error ?? "No se pudo subir la imagen");
+              }
+              image = result.url;
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Error al subir imagen",
+              );
+              return;
+            } finally {
+              setIsUploading(false);
+            }
+          }
           mutation.mutate({
             ...values,
             currency: "$",
@@ -69,9 +99,9 @@ export default function RegisterMenuItem() {
             featured: false,
             fulfillmentType: values.fulfillmentType,
             leadTimeDays: values.leadTimeDays,
-            image: values.image ?? undefined,
-          }),
-        )}
+            image,
+          });
+        })}
         className="mx-auto max-w-3xl space-y-5 py-6"
       >
         <div>
@@ -94,6 +124,25 @@ export default function RegisterMenuItem() {
             </FormItem>
           )}
         />
+        <div className="space-y-2">
+          <label
+            htmlFor="product-image-file"
+            className="text-sm font-medium"
+          >
+            Subir imagen a Cloudinary
+          </label>
+            <Input
+              id="product-image-file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) =>
+                setImageFile(event.target.files?.[0] ?? null)
+              }
+            />
+          <p className="text-muted-foreground text-xs">
+            JPG, PNG o WebP. Máximo 8 MB. Si eliges archivo, reemplaza la URL.
+          </p>
+        </div>
         <FormField
           control={form.control}
           name="description"
@@ -228,10 +277,14 @@ export default function RegisterMenuItem() {
         </div>
         <Button
           type="submit"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || isUploading}
           className="rounded-full"
         >
-          {mutation.isPending ? "Guardando..." : "Publicar producto"}
+          {isUploading
+            ? "Subiendo imagen..."
+            : mutation.isPending
+              ? "Guardando..."
+              : "Publicar producto"}
         </Button>
       </form>
     </Form>
