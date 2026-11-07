@@ -58,11 +58,11 @@ const Signup1 = ({
   };
 
   return (
-    <section className="bg-muted h-screen">
-      <div className="flex h-full items-center justify-center">
+    <section className="bg-muted min-h-[calc(100svh-2rem)] py-2 sm:py-6">
+      <div className="flex min-h-full items-center justify-center">
         <form
           onSubmit={handleSubmit}
-          className="border-muted flex w-full max-w-sm flex-col items-center gap-y-8 rounded-md border bg-white px-6 py-12 shadow-md"
+          className="border-muted flex w-full max-w-sm flex-col items-center gap-y-8 rounded-md border bg-white px-4 py-8 shadow-md sm:px-6 sm:py-12"
         >
           <div className="flex flex-col items-center gap-y-2">
             {/* Logo */}
@@ -78,7 +78,7 @@ const Signup1 = ({
                 </a>
               </div>
             )}
-            {heading && <h1 className="text-3xl font-semibold">{heading}</h1>}
+            {heading && <h1 className="text-center text-3xl font-semibold">{heading}</h1>}
           </div>
           <div className="flex w-full flex-col gap-8">
             <div className="flex flex-col gap-4">

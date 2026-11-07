@@ -55,7 +55,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="flex min-h-screen flex-col antialiased">
+      <body className="flex min-h-screen min-w-0 flex-col overflow-x-hidden antialiased">
         <TRPCReactProvider>
           <SessionProvider>
             <CartProvider>

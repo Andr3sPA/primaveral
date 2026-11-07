@@ -25,12 +25,12 @@ export function NavbarClient() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-[#faf9f7]/90 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="mx-auto flex h-20 min-w-0 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-stone-900 text-sm font-semibold text-white">
             PB
           </span>
-          <span className="font-display text-primary text-2xl font-semibold tracking-tight">
+          <span className="font-display text-primary truncate text-xl font-semibold tracking-tight sm:text-2xl">
             Primaveral{" "}
             <span className="text-muted-foreground font-normal">Bordados</span>
           </span>
@@ -75,7 +75,7 @@ export function NavbarClient() {
           )}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon" className="min-h-11 min-w-11 md:hidden">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -88,14 +88,14 @@ export function NavbarClient() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-lg text-stone-700"
+                    className="min-h-11 py-2 text-left text-lg text-stone-700"
                   >
                     {link.label}
                   </Link>
                 ))}
                 {session ? (
                   <button
-                    className="text-left text-lg text-stone-500"
+                    className="min-h-11 py-2 text-left text-lg text-stone-500"
                     onClick={() => signOut({ callbackUrl: "/" })}
                   >
                     Cerrar sesión

@@ -44,17 +44,17 @@ function ProductCard({ item }: { item: Product }) {
         </div>
         <div className="flex items-start justify-between gap-3 pt-4">
           <div>
-            <h3 className="font-medium text-stone-900">{item.name}</h3>
+            <h3 className="break-words font-medium text-stone-900">{item.name}</h3>
             <p className="mt-1 text-sm text-stone-500">{item.category}</p>
           </div>
-          <p className="font-semibold text-stone-900">
+          <p className="shrink-0 text-right font-semibold text-stone-900">
             {item.currency}
             {item.price.toFixed(2)}
           </p>
         </div>
       </Link>
       <button
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-stone-300 px-4 py-2.5 text-sm font-medium transition hover:border-stone-900 hover:bg-stone-900 hover:text-white"
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-stone-300 px-4 py-2.5 text-sm font-medium transition hover:border-stone-900 hover:bg-stone-900 hover:text-white"
         onClick={() =>
           addItem({
             id: item.id,
@@ -91,13 +91,13 @@ export default function Menu() {
   );
 
   return (
-    <main>
-      <section className="mx-auto grid max-w-7xl gap-10 px-6 pt-10 pb-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10 lg:pt-20">
+    <main className="min-w-0">
+      <section className="mx-auto grid max-w-7xl gap-10 px-4 pt-8 pb-16 sm:px-6 sm:pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-10 lg:pt-20">
         <div>
           <p className="mb-5 flex items-center gap-2 text-sm font-medium tracking-[0.2em] text-stone-500 uppercase">
             <Sparkles className="h-4 w-4" /> Hecho para quedarse
           </p>
-          <h1 className="font-display text-primary max-w-3xl text-6xl leading-[0.86] font-semibold tracking-tight sm:text-8xl">
+          <h1 className="font-display text-primary max-w-3xl text-5xl leading-[0.9] font-semibold tracking-tight sm:text-7xl lg:text-8xl">
             Prendas con historia, bordadas para ti.
           </h1>
           <p className="mt-7 max-w-xl text-lg leading-8 text-stone-600">
@@ -111,8 +111,8 @@ export default function Menu() {
             Ver colección <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="bg-primary relative min-h-[420px] overflow-hidden rounded-[2rem] p-4">
-          <div className="stitch-border relative h-full min-h-[388px] overflow-hidden rounded-[1.5rem] bg-[#ad7662]">
+        <div className="bg-primary relative min-h-[330px] overflow-hidden rounded-[2rem] p-3 sm:min-h-[420px] sm:p-4">
+          <div className="stitch-border relative h-full min-h-[304px] overflow-hidden rounded-[1.5rem] bg-[#ad7662] sm:min-h-[388px]">
             <div className="absolute inset-0 [background-image:linear-gradient(45deg,transparent_45%,#f4dfc8_46%,#f4dfc8_49%,transparent_50%),linear-gradient(-45deg,transparent_45%,#f4dfc8_46%,#f4dfc8_49%,transparent_50%)] [background-size:34px_34px] opacity-30" />
             <div className="absolute top-8 right-8 rounded-full border border-[#f4dfc8]/60 px-4 py-2 text-xs tracking-[0.2em] text-[#f4dfc8] uppercase">
               pieza 01 / 04
@@ -121,7 +121,7 @@ export default function Menu() {
               <p className="text-sm tracking-[0.2em] text-[#f4dfc8]/80 uppercase">
                 Nueva temporada
               </p>
-              <p className="font-display mt-2 text-5xl leading-none font-semibold">
+              <p className="font-display mt-2 text-4xl leading-none font-semibold sm:text-5xl">
                 El detalle hace la diferencia.
               </p>
             </div>
@@ -129,23 +129,23 @@ export default function Menu() {
         </div>
       </section>
 
-      <section id="coleccion" className="mx-auto max-w-7xl px-6 pb-24 lg:px-10">
+      <section id="coleccion" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24 lg:px-10">
         <div className="flex flex-col gap-5 border-b border-stone-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm tracking-[0.2em] text-stone-500 uppercase">
               La colección
             </p>
-            <h2 className="font-display text-primary mt-2 text-5xl font-semibold">
+            <h2 className="font-display text-primary mt-2 text-4xl font-semibold sm:text-5xl">
               Encuentra tu próxima favorita
             </h2>
           </div>
-          <label className="flex items-center gap-2 rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-500">
+          <label className="flex w-full items-center gap-2 rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-500 sm:w-auto">
             <Search className="h-4 w-4" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar prendas"
-              className="w-36 bg-transparent outline-none placeholder:text-stone-400"
+              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-stone-400 sm:w-36 sm:flex-none"
             />
           </label>
         </div>
@@ -154,7 +154,7 @@ export default function Menu() {
             <button
               key={item}
               onClick={() => setCategory(item)}
-              className={`rounded-full px-4 py-2 text-sm transition ${category === item ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}
+              className={`min-h-11 rounded-full px-4 py-2 text-sm transition ${category === item ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}
             >
               {item}
             </button>

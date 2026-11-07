@@ -64,7 +64,7 @@ export function Checkout() {
 
   if (!isHydrated) {
     return (
-      <main className="mx-auto max-w-6xl px-6 py-24 text-center text-stone-500">
+      <main className="mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
         Cargando tu carrito...
       </main>
     );
@@ -72,7 +72,7 @@ export function Checkout() {
 
   if (createOrder.isSuccess) {
     return (
-      <main className="mx-auto max-w-xl px-6 py-24 text-center">
+      <main className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
           <LockKeyhole />
         </div>
@@ -89,7 +89,7 @@ export function Checkout() {
   }
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-10 px-6 py-12 lg:grid-cols-[1fr_380px]">
+    <main className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
       <section>
         <button
           onClick={() => router.back()}
@@ -97,7 +97,7 @@ export function Checkout() {
         >
           ← Volver a la colección
         </button>
-        <h1 className="text-4xl font-medium">Finalizar pedido</h1>
+        <h1 className="text-3xl font-medium sm:text-4xl">Finalizar pedido</h1>
         <p className="mt-2 text-stone-500">
           Completa tus datos; el pago se coordinará contigo por ahora.
         </p>
@@ -157,12 +157,12 @@ export function Checkout() {
                           onValueChange={field.onChange}
                           className="grid gap-3 sm:grid-cols-2"
                         >
-                          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
+                          <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
                             <RadioGroupItem value="cash" />
                             <WalletCards className="h-5 w-5 text-stone-500" />
                             <span className="text-sm">Contraentrega</span>
                           </label>
-                          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
+                          <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
                             <RadioGroupItem value="credit-card" />
                             <CreditCard className="h-5 w-5 text-stone-500" />
                             <span className="text-sm">
@@ -241,7 +241,7 @@ export function Checkout() {
                             item.color,
                           )
                         }
-                        className="rounded-full border p-1"
+                        className="grid min-h-9 min-w-9 place-items-center rounded-full border p-1"
                       >
                         <Minus className="h-3 w-3" />
                       </button>
@@ -255,7 +255,7 @@ export function Checkout() {
                             item.color,
                           )
                         }
-                        className="rounded-full border p-1"
+                        className="grid min-h-9 min-w-9 place-items-center rounded-full border p-1"
                       >
                         <Plus className="h-3 w-3" />
                       </button>

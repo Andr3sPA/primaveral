@@ -32,7 +32,7 @@ export default function InventoryPage() {
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10 lg:px-10">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       <div className="flex flex-col gap-5 border-b border-stone-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm tracking-[0.2em] text-stone-500 uppercase">
@@ -43,7 +43,7 @@ export default function InventoryPage() {
             Controla disponibilidad y unidades de cada prenda.
           </p>
         </div>
-        <Button asChild className="rounded-full">
+        <Button asChild className="w-full rounded-full sm:w-auto">
           <Link href="/menu/register">
             <PackagePlus className="mr-2 h-4 w-4" /> Nuevo producto
           </Link>
@@ -67,7 +67,7 @@ export default function InventoryPage() {
         <div className="mt-8 grid gap-4">
           {products.data?.map((product) => (
             <Card key={product.id} className="border-stone-200 shadow-none">
-              <CardContent className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
+              <CardContent className="flex flex-col gap-5 p-4 sm:p-5 md:flex-row md:items-center">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-stone-100">
                   {product.image && (
                     <Image
@@ -97,7 +97,7 @@ export default function InventoryPage() {
                     {product.available ? "Disponible" : "Oculto"}
                   </button>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
                   <label className="text-sm text-stone-500">Stock</label>
                   <Input
                     type="number"
@@ -117,7 +117,7 @@ export default function InventoryPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-stone-400 hover:text-red-600"
+                    className="ml-auto min-h-10 min-w-10 text-stone-400 hover:text-red-600 md:ml-0"
                     onClick={() => {
                       if (window.confirm(`¿Eliminar ${product.name}?`))
                         remove.mutate(product.id);
