@@ -56,7 +56,7 @@ export default function RegisterMenuItem() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (values) => {
-          let image = values.image || undefined;
+          let image = values.image ?? undefined;
           if (imageFile) {
             setIsUploading(true);
             try {

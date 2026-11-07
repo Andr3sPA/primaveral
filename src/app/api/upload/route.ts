@@ -67,7 +67,13 @@ export async function POST(request: Request) {
         },
         (error, uploaded) => {
           if (error || !uploaded?.secure_url) {
-            reject(error ?? new Error("Cloudinary no devolvió una URL"));
+            reject(
+              error instanceof Error
+                ? error
+                : new Error(
+                    error?.message ?? "Cloudinary no devolvió una URL",
+                  ),
+            );
             return;
           }
           resolve({ secure_url: uploaded.secure_url });
