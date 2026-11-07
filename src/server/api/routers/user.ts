@@ -17,6 +17,7 @@ import {
   type AccountTokenPurpose,
 } from "@/server/auth/account-tokens";
 import { sendBrevoEmail } from "@/server/email/brevo";
+import { getSafeErrorMetadata } from "@/server/api/error-messages";
 
 const DUMMY_PASSWORD_HASH =
   "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
@@ -91,7 +92,7 @@ async function sendAccountTokenEmail(
     });
     console.error(
       "No se pudo enviar el correo de cuenta mediante Brevo.",
-      error,
+      getSafeErrorMetadata(error),
     );
     return false;
   }

@@ -13,6 +13,7 @@ import { ZodError } from "zod";
 
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
+import { getPublicErrorMessage } from "@/server/api/error-messages";
 
 /**
  * 1. CONTEXT
@@ -48,6 +49,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
   errorFormatter({ shape, error }) {
     return {
       ...shape,
+      message: getPublicErrorMessage(error),
       data: {
         ...shape.data,
         zodError:

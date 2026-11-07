@@ -1,0 +1,7 @@
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "municipality" TEXT,
+  ADD COLUMN IF NOT EXISTS "department" TEXT;
+
+ALTER TABLE "Order"
+  ADD COLUMN IF NOT EXISTS "municipality" TEXT,
+  ADD COLUMN IF NOT EXISTS "department" TEXT;

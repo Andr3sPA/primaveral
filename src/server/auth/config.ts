@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { createCaller } from "../api/root";
 import { createTRPCContext } from "../api/trpc";
 import type { Role } from "@prisma/client";
+import { getSafeErrorMetadata } from "@/server/api/error-messages";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -53,7 +54,10 @@ export const authConfig = {
             password: credentials.password,
           });
         } catch (error) {
-          console.error("Authentication error:", error);
+          console.error(
+            "Authentication request failed",
+            getSafeErrorMetadata(error),
+          );
           return null;
         }
       },

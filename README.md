@@ -54,23 +54,23 @@ repositorio. El endpoint acepta únicamente JPG, PNG y WebP de hasta 8 MB.
 
 La credencial de Neon compartida durante la configuración debe considerarse expuesta y rotarse antes de desplegar.
 
-## Desarrollo
+## Desarrollo y despliegue
 
 ```bash
 npm install
-npx prisma db push
+npm run db:push
 npm run dev
 ```
 
-La migración `prisma/migrations/20261107170000_guest_orders` agrega campos
-opcionales para pedidos de invitado, municipio y departamento, y permite
-desvincular una cuenta eliminada sin borrar sus pedidos. Este repositorio aún no
-tiene una migración inicial del esquema: aplica esa migración incremental solo
-en una base que ya tenga el esquema existente. Para una base local vacía,
-sincroniza primero el esquema con `npx prisma db push`, únicamente contra una
-base aislada. No ejecutes `db push` contra producción. Los nuevos campos de
-municipio/departamento admiten valores vacíos para no invalidar registros
-anteriores; el checkout exige esos datos para pedidos nuevos.
+`npm run db:push` sirve solo para crear o sincronizar una base local aislada;
+nunca lo ejecutes contra producción. El repositorio no tiene una migración
+inicial, así que las migraciones incrementales requieren que las tablas
+existentes ya estén creadas. En Vercel, `vercel-build` aplica
+`prisma migrate deploy` únicamente en el entorno **Production**, antes de
+compilar. Configura Preview con una base de pruebas separada y aplica sus
+migraciones antes de probar esa versión. La migración de reparación agrega de
+forma segura las columnas opcionales de municipio y departamento si faltan,
+sin borrar datos.
 
 El inicio de sesión y los pedidos autenticados requieren un correo verificado.
 Los enlaces de verificación vencen en 24 horas y los de restablecimiento en una
