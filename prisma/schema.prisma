@@ -78,10 +78,17 @@ model MenuItem {
   colors      String[]   @default([])
   stock       Int        @default(0)
   featured    Boolean    @default(false)
+  fulfillmentType FulfillmentType @default(READY_TO_SHIP)
+  leadTimeDays Int        @default(0)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   image       String?
   orderItems  OrderItem[]
+}
+
+enum FulfillmentType {
+  READY_TO_SHIP
+  SOURCED_TO_ORDER
 }
 
 // Tabla de órdenes de los clientes

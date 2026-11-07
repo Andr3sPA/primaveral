@@ -26,6 +26,8 @@ const schema = z.object({
   image: z.string().url().optional().or(z.literal("")),
   sizes: z.string().optional(),
   colors: z.string().optional(),
+  fulfillmentType: z.enum(["READY_TO_SHIP", "SOURCED_TO_ORDER"]),
+  leadTimeDays: z.coerce.number().int().min(0).max(365),
 });
 
 export default function RegisterMenuItem() {
@@ -36,6 +38,8 @@ export default function RegisterMenuItem() {
       stock: 1,
       sizes: "S, M, L",
       colors: "",
+      fulfillmentType: "READY_TO_SHIP",
+      leadTimeDays: 0,
     },
   });
   const mutation = api.menu.registerMenuItem.useMutation({
@@ -63,6 +67,8 @@ export default function RegisterMenuItem() {
                 .map((value) => value.trim())
                 .filter(Boolean) ?? [],
             featured: false,
+            fulfillmentType: values.fulfillmentType,
+            leadTimeDays: values.leadTimeDays,
             image: values.image ?? undefined,
           }),
         )}
@@ -152,6 +158,42 @@ export default function RegisterMenuItem() {
                 <FormLabel>URL de imagen</FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="https://..." />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="fulfillmentType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Disponibilidad</FormLabel>
+                <FormControl>
+                  <select
+                    {...field}
+                    className="border-input bg-background ring-offset-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                  >
+                    <option value="READY_TO_SHIP">Envío inmediato</option>
+                    <option value="SOURCED_TO_ORDER">
+                      Traer por encargo
+                    </option>
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="leadTimeDays"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Días estimados de preparación</FormLabel>
+                <FormControl>
+                  <Input {...field} type="number" min={0} max={365} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

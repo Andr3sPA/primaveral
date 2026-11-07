@@ -10,6 +10,7 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 - Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`.
 - Panel administrativo en `/admin` con accesos a inventario, alta de productos, pedidos y métricas.
 - Productos con categoría, tallas, colores, imagen, precio, stock y disponibilidad.
+- Cada producto puede marcarse como `Envío inmediato` o `Traer por encargo`, con un plazo estimado en días visible en la ficha, bolsa y checkout.
 
 ## Variables de entorno
 
@@ -32,6 +33,11 @@ npm install
 npx prisma db push
 npm run dev
 ```
+
+Cuando se agreguen cambios al modelo de productos, ejecuta `npx prisma db push` con
+`DATABASE_URL` configurada para crear los campos nuevos en Neon. Los productos
+existentes quedan configurados por defecto como `READY_TO_SHIP` con `0` días
+adicionales.
 
 Validaciones:
 

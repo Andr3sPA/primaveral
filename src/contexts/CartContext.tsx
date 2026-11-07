@@ -12,6 +12,8 @@ export interface CartItem {
   price: number;
   size?: string;
   color?: string;
+  fulfillmentType?: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
+  leadTimeDays?: number;
   quantity: number;
 }
 

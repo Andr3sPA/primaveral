@@ -121,6 +121,17 @@ export default function ShoppingCart() {
                                       {item.description ??
                                         "No description available"}
                                     </p>
+                                    {item.fulfillmentType ===
+                                      "SOURCED_TO_ORDER" &&
+                                      item.leadTimeDays &&
+                                      item.leadTimeDays > 0 && (
+                                        <p className="mt-1 text-xs text-amber-700">
+                                          Preparación: {item.leadTimeDays}{" "}
+                                          {item.leadTimeDays === 1
+                                            ? "día"
+                                            : "días"}
+                                        </p>
+                                      )}
                                   </div>
                                   <div className="flex flex-1 items-end justify-between text-sm">
                                     <p className="text-gray-500">

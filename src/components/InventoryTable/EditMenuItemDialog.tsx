@@ -26,6 +26,8 @@ interface MenuItem {
   createdAt: Date;
   updatedAt: Date;
   image: string | null;
+  fulfillmentType: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
+  leadTimeDays: number;
 }
 
 // Componente para editar los detalles de un elemento del menú
@@ -42,6 +44,12 @@ export default function EditMenuItemDialog({
   const [currency, setCurrency] = React.useState(menuItem.currency);
   const [price, setPrice] = React.useState(menuItem.price.toString());
   const [image, setImage] = React.useState(menuItem.image ?? "");
+  const [fulfillmentType, setFulfillmentType] = React.useState(
+    menuItem.fulfillmentType,
+  );
+  const [leadTimeDays, setLeadTimeDays] = React.useState(
+    menuItem.leadTimeDays.toString(),
+  );
 
   const utils = api.useUtils();
 
@@ -66,6 +74,8 @@ export default function EditMenuItemDialog({
       currency,
       price: parseFloat(price),
       image: image || undefined,
+      fulfillmentType,
+      leadTimeDays: parseInt(leadTimeDays, 10),
     });
   };
 
@@ -132,6 +142,36 @@ export default function EditMenuItemDialog({
               value={image}
               onChange={(e) => setImage(e.target.value)}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="fulfillmentType">Disponibilidad</Label>
+              <select
+                id="fulfillmentType"
+                value={fulfillmentType}
+                onChange={(e) =>
+                  setFulfillmentType(
+                    e.target.value as "READY_TO_SHIP" | "SOURCED_TO_ORDER",
+                  )
+                }
+                className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+              >
+                <option value="READY_TO_SHIP">Envío inmediato</option>
+                <option value="SOURCED_TO_ORDER">Traer por encargo</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="leadTimeDays">Días estimados</Label>
+              <Input
+                id="leadTimeDays"
+                type="number"
+                min="0"
+                max="365"
+                value={leadTimeDays}
+                onChange={(e) => setLeadTimeDays(e.target.value)}
+                required
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button

@@ -28,6 +28,8 @@ export default async function MenuItemPage({
             category={item.category}
             sizes={item.sizes ?? []}
             colors={item.colors ?? []}
+            fulfillmentType={item.fulfillmentType}
+            leadTimeDays={item.leadTimeDays}
           />
         </div>
       ) : (

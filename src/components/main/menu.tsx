@@ -36,6 +36,11 @@ function ProductCard({ item }: { item: Product }) {
               Favorito
             </span>
           )}
+          {item.fulfillmentType === "SOURCED_TO_ORDER" && (
+            <span className="absolute right-4 bottom-4 rounded-full bg-[#f7f1e8]/95 px-3 py-1 text-xs font-medium text-amber-800">
+              Por encargo
+            </span>
+          )}
         </div>
         <div className="flex items-start justify-between gap-3 pt-4">
           <div>

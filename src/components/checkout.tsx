@@ -223,6 +223,14 @@ export function Checkout() {
                       {item.prefix}
                       {item.price.toFixed(2)}
                     </p>
+                    {item.fulfillmentType === "SOURCED_TO_ORDER" &&
+                      item.leadTimeDays &&
+                      item.leadTimeDays > 0 && (
+                        <p className="mt-1 text-xs text-amber-700">
+                          Preparación estimada: {item.leadTimeDays}{" "}
+                          {item.leadTimeDays === 1 ? "día" : "días"}
+                        </p>
+                      )}
                     <div className="mt-1 flex items-center gap-2">
                       <button
                         onClick={() =>

@@ -5,6 +5,7 @@ import {
   adminProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
+import { FulfillmentType } from "@prisma/client";
 
 const productInput = z.object({
   name: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -17,6 +18,8 @@ const productInput = z.object({
   colors: z.array(z.string().trim().min(1)).max(12).default([]),
   stock: z.number().int().min(0).max(100000).default(0),
   featured: z.boolean().default(false),
+  fulfillmentType: z.nativeEnum(FulfillmentType).default("READY_TO_SHIP"),
+  leadTimeDays: z.number().int().min(0).max(365).default(0),
 });
 
 export const menuRouter = createTRPCRouter({

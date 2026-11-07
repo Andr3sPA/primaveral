@@ -24,6 +24,8 @@ interface MenuItemDetailsProps {
   category?: string;
   sizes?: string[];
   colors?: string[];
+  fulfillmentType?: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
+  leadTimeDays?: number;
 }
 
 function MenuItemDetails({
@@ -38,6 +40,8 @@ function MenuItemDetails({
   sizes = [],
   colors = [],
   stockCount = 0,
+  fulfillmentType = "READY_TO_SHIP",
+  leadTimeDays = 0,
 }: MenuItemDetailsProps) {
   const { addItem } = useCart();
   const router = useRouter();
@@ -65,6 +69,8 @@ function MenuItemDetails({
       price,
       size: selectedSize || undefined,
       color: selectedColor || undefined,
+      fulfillmentType,
+      leadTimeDays,
     });
     toast.success(`${title} se añadió a tu bolsa`);
     if (goToCheckout) router.push("/checkout");
@@ -147,6 +153,18 @@ function MenuItemDetails({
               </span>
             </div>
             <Separator className="my-7" />
+            <div className="bg-secondary/60 border-border mb-7 rounded-2xl border p-4 text-sm">
+              <p className="font-semibold">
+                {fulfillmentType === "SOURCED_TO_ORDER"
+                  ? "Prenda traída por encargo"
+                  : "Lista para preparar"}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                {fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0
+                  ? `Estimamos ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"} para traerla y dejarla lista.`
+                  : "La preparamos para despacho en 1 a 2 días hábiles."}
+              </p>
+            </div>
 
             {sizes.length > 0 && (
               <div className="mb-7">
