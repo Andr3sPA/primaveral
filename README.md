@@ -2,6 +2,16 @@
 
 Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantiene Next.js, tRPC, Prisma, NextAuth, Tailwind y los componentes Radix/shadcn existentes, adaptados a catálogo, carrito, pedidos e inventario de prendas.
 
+## Stack tecnológico
+
+- **Framework web:** Next.js 15 con React 19 y TypeScript.
+- **API y consultas:** tRPC 11, usado para definir routers/procedures tipados y consumirlos desde React Query; el endpoint está expuesto en `/api/trpc`.
+- **Base de datos y ORM:** PostgreSQL sobre Neon, accedida mediante Prisma 6 y `@prisma/client`.
+- **Autenticación:** NextAuth 5 con `@auth/prisma-adapter` para persistir usuarios, cuentas y sesiones en Prisma.
+- **Despliegue:** Vercel, con `DATABASE_URL`, `AUTH_SECRET` y `CLOUDINARY_URL` configuradas por entorno.
+- **Interfaz:** Tailwind CSS, componentes Radix UI y utilidades de shadcn/ui.
+- **Imágenes:** Cloudinary para la carga y entrega de imágenes de productos.
+
 ## Funcionalidades
 
 - Catálogo público con búsqueda, categorías, destacados y detalle de producto.
