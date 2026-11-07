@@ -89,19 +89,31 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
               <div className="space-y-1 text-sm">
                 <p>
                   <span className="font-medium">Nombre:</span>{" "}
-                  {orderDetails.user.name ?? "Sin nombre"}
+                  {orderDetails.guestName ??
+                    orderDetails.user?.name ??
+                    "Sin nombre"}
                 </p>
                 <p>
                   <span className="font-medium">Email:</span>{" "}
-                  {orderDetails.user.email}
+                  {orderDetails.guestEmail ??
+                    orderDetails.user?.email ??
+                    "Sin correo"}
                 </p>
                 <p>
                   <span className="font-medium">Teléfono:</span>{" "}
-                  {orderDetails.phone}
+                  {orderDetails.phone ?? "No indicado"}
                 </p>
                 <p>
                   <span className="font-medium">Dirección:</span>{" "}
                   {orderDetails.address}
+                </p>
+                <p>
+                  <span className="font-medium">Municipio:</span>{" "}
+                  {orderDetails.municipality ?? "No indicado"}
+                </p>
+                <p>
+                  <span className="font-medium">Departamento:</span>{" "}
+                  {orderDetails.department ?? "No indicado"}
                 </p>
               </div>
             </div>

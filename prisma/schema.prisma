@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -17,6 +17,8 @@ model User {
   role          Role      @default(CLIENT)
   phone         String?
   address       String?
+  municipality  String?
+  department    String?
   accounts      Account[]
   sessions      Session[]
   orders        Order[]   @relation("UserOrders")
@@ -30,20 +32,20 @@ enum Role {
 }
 
 model Account {
-  id                        String  @id @default(cuid())
-  userId                    String
-  type                      String
-  provider                  String
-  providerAccountId         String
-  refresh_token             String?
-  access_token              String?
-  expires_at                Int?
-  token_type                String?
-  scope                     String?
-  id_token                  String?
-  session_state             String?
-  refresh_token_expires_in  Int?
-  user                      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -66,23 +68,23 @@ model VerificationToken {
 
 // Tabla de elementos del menú
 model MenuItem {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  currency    String     @default("$")
-  price       Float
-  available   Boolean    @default(true)
-  category    String     @default("Novedades")
-  sizes       String[]   @default([])
-  colors      String[]   @default([])
-  stock       Int        @default(0)
-  featured    Boolean    @default(false)
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  currency        String          @default("$")
+  price           Float
+  available       Boolean         @default(true)
+  category        String          @default("Novedades")
+  sizes           String[]        @default([])
+  colors          String[]        @default([])
+  stock           Int             @default(0)
+  featured        Boolean         @default(false)
   fulfillmentType FulfillmentType @default(READY_TO_SHIP)
-  leadTimeDays Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  image       String?
-  orderItems  OrderItem[]
+  leadTimeDays    Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  image           String?
+  orderItems      OrderItem[]
 }
 
 enum FulfillmentType {
@@ -92,17 +94,21 @@ enum FulfillmentType {
 
 // Tabla de órdenes de los clientes
 model Order {
-  id          String       @id @default(cuid())
-  userId      String
-  user        User         @relation("UserOrders", fields: [userId], references: [id])
-  status      OrderStatus  @default(PENDING)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  total       Float
-  phone       String
-  address     String
-  orderItems  OrderItem[]
-  payment     Payment?
+  id           String      @id @default(cuid())
+  userId       String?
+  user         User?       @relation("UserOrders", fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail   String?
+  guestName    String?
+  status       OrderStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  total        Float
+  phone        String?
+  address      String
+  municipality String?
+  department   String?
+  orderItems   OrderItem[]
+  payment      Payment?
 }
 
 // Estado de una orden
@@ -116,33 +122,33 @@ enum OrderStatus {
 
 // Detalles de cada ítem pedido
 model OrderItem {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   orderId    String
-  order      Order     @relation(fields: [orderId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id])
   menuItemId String
-  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
   quantity   Int
   subtotal   Float
 }
 
 // Información de pagos
 model Payment {
-  id         String   @id @default(cuid())
-  orderId    String   @unique
-  order      Order    @relation(fields: [orderId], references: [id])
-  method     String   // Ej: CASH, CARD
-  status     String   // Ej: PAID, PENDING, FAILED
-  amount     Float
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  method    String // Ej: CASH, CARD
+  status    String // Ej: PAID, PENDING, FAILED
+  amount    Float
+  createdAt DateTime @default(now())
 }
 
 // Inventario de insumos
 model InventoryItem {
-  id         String   @id @default(cuid())
-  name       String
-  quantity   Int
-  unit       String   // Ej: "kg", "units"
-  threshold  Int      // Nivel mínimo antes de alerta de stock
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Int
+  unit      String // Ej: "kg", "units"
+  threshold Int // Nivel mínimo antes de alerta de stock
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -9,11 +9,12 @@ import {
   Plus,
   WalletCards,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import Image from "next/image";
 import { api } from "@/trpc/react";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "./ui/button";
@@ -31,13 +32,26 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Textarea } from "./ui/textarea";
 
 const schema = z.object({
-  address: z.string().min(8, "Indica una dirección completa"),
-  phone: z.string().min(7, "Indica un teléfono válido"),
+  name: z.string().max(100).optional(),
+  email: z
+    .string()
+    .email("Indica un correo válido")
+    .or(z.literal(""))
+    .optional(),
+  address: z.string().trim().min(8, "Indica una dirección completa").max(250),
+  municipality: z.string().trim().min(2, "Indica el municipio").max(100),
+  department: z.string().trim().min(2, "Indica el departamento").max(100),
+  phone: z.string().trim().max(30).optional(),
   paymentMethod: z.enum(["credit-card", "cash"]),
 });
 
+type CheckoutValues = z.infer<typeof schema>;
+type AddressMode = "saved" | "new";
+
 export function Checkout() {
   const router = useRouter();
+  const { status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === "authenticated";
   const {
     items,
     isHydrated,
@@ -46,23 +60,99 @@ export function Checkout() {
     updateQuantity,
     removeItem,
   } = useCart();
-  const form = useForm<z.infer<typeof schema>>({
+  const form = useForm<CheckoutValues>({
     resolver: zodResolver(schema),
-    defaultValues: { paymentMethod: "cash" },
-  });
-  const createOrder = api.order.createNew.useMutation({
-    onSuccess: () => {
-      clearCart();
+    defaultValues: {
+      name: "",
+      email: "",
+      address: "",
+      municipality: "",
+      department: "",
+      phone: "",
+      paymentMethod: "cash",
     },
   });
+  const profileQuery = api.user.getProfile.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const [addressMode, setAddressMode] = useState<AddressMode>("new");
+  const [saveNewAddress, setSaveNewAddress] = useState(false);
+  const createOrder = api.order.createNew.useMutation({
+    onSuccess: () => clearCart(),
+  });
   const subtotal = getTotalPrice();
+  const profile = profileQuery.data;
+  const hasSavedAddress = Boolean(
+    profile?.address && profile.municipality && profile.department,
+  );
+  const { reset, setValue, setError, handleSubmit } = form;
 
   useEffect(() => {
-    if (isHydrated && !items.length && !createOrder.isSuccess)
+    if (!profile) return;
+
+    reset({
+      name: profile.name ?? "",
+      email: profile.email,
+      address: profile.address ?? "",
+      municipality: profile.municipality ?? "",
+      department: profile.department ?? "",
+      phone: profile.phone ?? "",
+      paymentMethod: "cash",
+    });
+    setAddressMode(hasSavedAddress ? "saved" : "new");
+    setSaveNewAddress(false);
+  }, [hasSavedAddress, profile, reset]);
+
+  useEffect(() => {
+    if (isHydrated && !items.length && !createOrder.isSuccess) {
       router.replace("/");
+    }
   }, [isHydrated, items.length, createOrder.isSuccess, router]);
 
-  if (!isHydrated) {
+  const selectAddressMode = (mode: AddressMode) => {
+    setAddressMode(mode);
+    if (mode === "saved" && profile) {
+      setValue("address", profile.address ?? "");
+      setValue("municipality", profile.municipality ?? "");
+      setValue("department", profile.department ?? "");
+      setValue("phone", profile.phone ?? "");
+    }
+  };
+
+  const onSubmit = (values: CheckoutValues) => {
+    if (!isAuthenticated && !values.email) {
+      setError("email", {
+        type: "required",
+        message: "El correo es obligatorio para comprar como invitado.",
+      });
+      return;
+    }
+
+    createOrder.mutate({
+      items: items.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      })),
+      address: values.address,
+      municipality: values.municipality,
+      department: values.department,
+      phone: values.phone?.trim() ? values.phone : undefined,
+      email: isAuthenticated
+        ? undefined
+        : values.email?.trim()
+          ? values.email
+          : undefined,
+      name: isAuthenticated
+        ? undefined
+        : values.name?.trim()
+          ? values.name
+          : undefined,
+      saveAddress: isAuthenticated && addressMode === "new" && saveNewAddress,
+      paymentMethod: values.paymentMethod,
+    });
+  };
+
+  if (!isHydrated || sessionStatus === "loading") {
     return (
       <main className="mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
         Cargando tu carrito...
@@ -92,6 +182,7 @@ export function Checkout() {
     <main className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
       <section>
         <button
+          type="button"
           onClick={() => router.back()}
           className="mb-8 text-sm text-stone-500 hover:text-stone-900"
         >
@@ -99,52 +190,183 @@ export function Checkout() {
         </button>
         <h1 className="text-3xl font-medium sm:text-4xl">Finalizar pedido</h1>
         <p className="mt-2 text-stone-500">
-          Completa tus datos; el pago se coordinará contigo por ahora.
+          {isAuthenticated
+            ? "Elige una dirección guardada o indica una nueva."
+            : "Puedes completar tu compra sin crear una cuenta."}
         </p>
         <Card className="mt-8 border-stone-200 shadow-none">
           <CardContent className="p-6 sm:p-8">
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit((values) =>
-                  createOrder.mutate({
-                    ...values,
-                    items: items.map((item) => ({
-                      productId: item.id,
-                      quantity: item.quantity,
-                    })),
-                  }),
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {!isAuthenticated && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Correo electrónico</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              autoComplete="email"
+                              placeholder="tu@correo.com"
+                              required
+                              maxLength={254}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre (opcional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              autoComplete="name"
+                              maxLength={100}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
                 )}
-                className="space-y-6"
-              >
+                {isAuthenticated && hasSavedAddress && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Dirección de entrega</p>
+                    <RadioGroup
+                      value={addressMode}
+                      onValueChange={(value) => {
+                        if (value === "saved" || value === "new") {
+                          selectAddressMode(value);
+                        }
+                      }}
+                      className="grid gap-3"
+                    >
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-stone-200 p-4">
+                        <RadioGroupItem value="saved" className="mt-1" />
+                        <span className="text-sm">
+                          <span className="block font-medium">
+                            Usar mi dirección guardada
+                          </span>
+                          <span className="text-stone-500">
+                            {profile?.address}, {profile?.municipality},{" "}
+                            {profile?.department}
+                          </span>
+                        </span>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
+                        <RadioGroupItem value="new" />
+                        <span className="text-sm font-medium">
+                          Usar otra dirección
+                        </span>
+                      </label>
+                    </RadioGroup>
+                  </div>
+                )}
                 <FormField
                   control={form.control}
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Dirección de entrega</FormLabel>
+                      <FormLabel>Dirección</FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
-                          placeholder="Calle, número, ciudad"
+                          placeholder="Calle, carrera, número, barrio"
+                          readOnly={isAuthenticated && addressMode === "saved"}
+                          maxLength={250}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="municipality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Municipio</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            autoComplete="address-level2"
+                            placeholder="Municipio"
+                            readOnly={
+                              isAuthenticated && addressMode === "saved"
+                            }
+                            maxLength={100}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Departamento</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            autoComplete="address-level1"
+                            placeholder="Departamento"
+                            readOnly={
+                              isAuthenticated && addressMode === "saved"
+                            }
+                            maxLength={100}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Teléfono</FormLabel>
+                      <FormLabel>Teléfono (opcional)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="+57 300 000 0000" />
+                        <Input
+                          {...field}
+                          type="tel"
+                          autoComplete="tel"
+                          placeholder="+57 300 000 0000"
+                          readOnly={isAuthenticated && addressMode === "saved"}
+                          maxLength={30}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                {isAuthenticated && addressMode === "new" && (
+                  <label className="flex items-center gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={saveNewAddress}
+                      onChange={(event) =>
+                        setSaveNewAddress(event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-stone-300"
+                    />
+                    Guardar esta dirección en mi perfil
+                  </label>
+                )}
                 <FormField
                   control={form.control}
                   name="paymentMethod"
@@ -175,14 +397,30 @@ export function Checkout() {
                     </FormItem>
                   )}
                 />
+                {profileQuery.error && (
+                  <p
+                    role="alert"
+                    className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                  >
+                    No fue posible cargar tu perfil:{" "}
+                    {profileQuery.error.message}
+                  </p>
+                )}
                 {createOrder.error && (
-                  <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                  <p
+                    role="alert"
+                    className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                  >
                     {createOrder.error.message}
                   </p>
                 )}
                 <Button
                   type="submit"
-                  disabled={createOrder.isPending || !items.length}
+                  disabled={
+                    createOrder.isPending ||
+                    !items.length ||
+                    (isAuthenticated && profileQuery.isLoading)
+                  }
                   className="w-full rounded-full"
                 >
                   {createOrder.isPending ? (
@@ -233,6 +471,8 @@ export function Checkout() {
                       )}
                     <div className="mt-1 flex items-center gap-2">
                       <button
+                        type="button"
+                        aria-label={`Quitar una unidad de ${item.title}`}
                         onClick={() =>
                           updateQuantity(
                             item.id,
@@ -247,6 +487,8 @@ export function Checkout() {
                       </button>
                       <span className="text-xs">{item.quantity}</span>
                       <button
+                        type="button"
+                        aria-label={`Agregar una unidad de ${item.title}`}
                         onClick={() =>
                           updateQuantity(
                             item.id,
@@ -260,6 +502,7 @@ export function Checkout() {
                         <Plus className="h-3 w-3" />
                       </button>
                       <button
+                        type="button"
                         onClick={() =>
                           removeItem(item.id, item.size, item.color)
                         }

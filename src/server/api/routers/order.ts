@@ -4,11 +4,11 @@ import { TRPCError } from "@trpc/server";
 import {
   adminProcedure,
   createTRPCRouter,
-  protectedProcedure,
+  publicProcedure,
 } from "@/server/api/trpc";
 
 export const orderRouter = createTRPCRouter({
-  createNew: protectedProcedure
+  createNew: publicProcedure
     .input(
       z.object({
         items: z
@@ -20,11 +20,38 @@ export const orderRouter = createTRPCRouter({
           )
           .min(1),
         address: z.string().trim().min(8).max(250),
-        phone: z.string().trim().min(7).max(30),
+        municipality: z.string().trim().min(2).max(100),
+        department: z.string().trim().min(2).max(100),
+        phone: z.string().trim().max(30).optional(),
+        email: z.string().trim().email().max(254).optional(),
+        name: z.string().trim().max(100).optional(),
+        saveAddress: z.boolean().default(false),
         paymentMethod: z.enum(["credit-card", "cash"]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const session = ctx.session?.user;
+      if (!session && !input.email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "El correo electrónico es obligatorio para comprar como invitado.",
+        });
+      }
+
+      const customer = session
+        ? await ctx.db.user.findUnique({
+            where: { id: session.id },
+            select: { id: true, email: true, name: true },
+          })
+        : null;
+      if (session && !customer) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Inicia sesión nuevamente para completar tu pedido.",
+        });
+      }
+
       const ids = input.items.map((item) => item.productId);
       const products = await ctx.db.menuItem.findMany({
         where: { id: { in: ids }, available: true },
@@ -55,6 +82,18 @@ export const orderRouter = createTRPCRouter({
       const total = lines.reduce((sum, line) => sum + line.subtotal, 0);
 
       return ctx.db.$transaction(async (tx) => {
+        if (customer && input.saveAddress) {
+          await tx.user.update({
+            where: { id: customer.id },
+            data: {
+              phone: input.phone?.trim() ? input.phone : null,
+              address: input.address,
+              municipality: input.municipality,
+              department: input.department,
+            },
+          });
+        }
+
         for (const line of lines) {
           const updated = await tx.menuItem.updateMany({
             where: { id: line.product.id, stock: { gte: line.quantity } },
@@ -69,9 +108,13 @@ export const orderRouter = createTRPCRouter({
         }
         return tx.order.create({
           data: {
-            userId: ctx.session.user.id,
+            userId: customer?.id,
+            guestEmail: customer ? null : input.email?.toLowerCase(),
+            guestName: customer ? null : input.name?.trim() ? input.name : null,
             address: input.address,
-            phone: input.phone,
+            municipality: input.municipality,
+            department: input.department,
+            phone: input.phone?.trim() ? input.phone : null,
             total,
             orderItems: {
               create: lines.map((line) => ({

@@ -1,65 +1,63 @@
-"use client"; // Add "use client" directive
+"use client";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import React, { useState } from "react" // Import React and useState
-import { signIn } from "next-auth/react" // Import signIn
-import { toast } from "sonner"
+import Link from "next/link";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { api } from "@/trpc/react";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+
+type FormResponse = {
+  status: "idle" | "loading" | "error" | "ok";
+  info: string;
+};
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [response, setResponse] = useState({
-    status: "",
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [response, setResponse] = useState<FormResponse>({
+    status: "idle",
     info: "",
-  })
-  const router = useRouter()
+  });
+  const router = useRouter();
+  const requestVerification = api.user.requestEmailVerification.useMutation({
+    onSuccess: ({ message }) => setResponse({ status: "ok", info: message }),
+    onError: (error) => setResponse({ status: "error", info: error.message }),
+  });
 
-  const isValidEmail = (email: string) => {
-    // Basic email validation regex
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const validFields = isValidEmail(email) && password.length >= 8
-
-    if (!validFields) {
-      setResponse({
-        status: "error",
-        info: "Ingresa un correo válido y una contraseña de al menos 8 carácteres",
-      })
-      return
-    }
-    setResponse({ status: "loading", info: "Iniciando sesión..." }) // Provide loading info
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setResponse({ status: "loading", info: "Iniciando sesión..." });
     void signIn("credentials", {
       email,
       password,
       redirect: false,
-    }).then((res) => {
-      if (res && (res.error || !res.ok)) {
-        const errorMessage =
-          res.error === "CredentialsSignin"
-            ? "Email o contraseña incorrectos."
-            : res.error ?? "Error desconocido al iniciar sesión."
+    })
+      .then((result) => {
+        if (!result || result.error || !result.ok) {
+          setResponse({
+            status: "error",
+            info: "Correo o contraseña incorrectos, o la cuenta todavía no está verificada.",
+          });
+          return;
+        }
+
+        setResponse({ status: "ok", info: "Inicio de sesión exitoso." });
+        router.push("/");
+      })
+      .catch(() => {
         setResponse({
           status: "error",
-          info: errorMessage, // Display specific error from signIn or a generic one
-        })
-        toast("Imposible iniciar sesión",{
-          description: errorMessage,
-        })
-      } else {
-        setResponse({ status: "ok", info: "Inicio de sesión exitoso!" })
-        void router.push('/'); 
-      }
-    })
-  }
+          info: "No fue posible iniciar sesión. Inténtalo de nuevo.",
+        });
+      });
+  };
 
   return (
     <form
@@ -68,78 +66,82 @@ export function LoginForm({
       {...props}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Login to your account</h1>
+        <h1 className="text-2xl font-bold">Inicia sesión</h1>
         <p className="text-muted-foreground text-sm text-balance">
-          Enter your email below to login to your account
+          Accede a tu cuenta de Primaveral Bordados.
         </p>
       </div>
-      <div className="grid gap-6">
-        <div className="grid gap-3">
-          <Label htmlFor="email">Email</Label>
+      <div className="grid gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="email">Correo electrónico</Label>
           <Input
             id="email"
             type="email"
-            placeholder="m@example.com"
+            autoComplete="email"
             required
+            maxLength={254}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.target.value)}
           />
         </div>
-        <div className="grid gap-3">
-          <div className="flex items-center">
-            <Label htmlFor="password">Password</Label>
-            <a
-              href="#"
-              className="ml-auto min-h-11 py-3 text-right text-sm underline-offset-4 hover:underline"
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <Link
+              href="/user/forgot-password"
+              className="min-h-11 py-3 text-right text-sm underline-offset-4 hover:underline"
             >
-              Forgot your password?
-            </a>
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
           <Input
             id="password"
             type="password"
+            autoComplete="current-password"
             required
+            maxLength={128}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        {response.status === "error" && response.info && (
-          <p className="text-sm text-red-500">{response.info}</p>
-        )}
-        {response.status === "loading" && response.info && (
-          <p className="text-sm text-blue-500">{response.info}</p>
+        {response.info && (
+          <p
+            role={response.status === "error" ? "alert" : "status"}
+            className={cn(
+              "text-sm",
+              response.status === "error" && "text-red-600",
+              response.status === "ok" && "text-emerald-700",
+              response.status === "loading" && "text-blue-600",
+            )}
+          >
+            {response.info}
+          </p>
         )}
         <Button
           type="submit"
           className="min-h-11 w-full"
           disabled={response.status === "loading"}
         >
-          {response.status === "loading" ? "Iniciando..." : "Login"}
+          {response.status === "loading" ? "Iniciando..." : "Iniciar sesión"}
         </Button>
-        <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-          <span className="bg-background text-muted-foreground relative z-10 px-2">
-            Or continue with
-          </span>
-        </div>
-        <Button type="button" variant="outline" className="min-h-11 w-full">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
-              fill="currentColor"
-            />
-          </svg>
-          Login with GitHub
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 w-full"
+          disabled={!email || requestVerification.isPending}
+          onClick={() => requestVerification.mutate({ email })}
+        >
+          {requestVerification.isPending
+            ? "Enviando..."
+            : "Reenviar correo de verificación"}
         </Button>
       </div>
       <div className="text-center text-sm">
-        Don&apos;t have an account?{" "}
-        <a
-          href="/user/signup"
-          className="underline underline-offset-4"
-        >
-          Sign up
-        </a>
+        ¿No tienes una cuenta?{" "}
+        <Link href="/user/signup" className="underline underline-offset-4">
+          Regístrate
+        </Link>
       </div>
     </form>
-  )
+  );
 }

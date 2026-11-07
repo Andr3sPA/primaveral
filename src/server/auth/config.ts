@@ -30,23 +30,12 @@ declare module "next-auth" {
 export const authConfig = {
   providers: [
     CredentialsProvider({
-      // The name to display on the sign in form (e.g. 'Sign in with...')
       name: "Credentials",
-      // The credentials is used to generate a suitable form on the sign in page.
-      // You can specify whatever fields you are expecting to be submitted.
-      // e.g. domain, username, password, 2FA token, etc.
-      // You can pass any HTML attribute to the <input> tag through the object.
       credentials: {
-        email: { label: "Email", type: "text", placeholder: "jsmith" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        // You need to provide your own logic here that takes the credentials
-        // submitted and returns either a object representing a user or value
-        // that is false/null if the credentials are invalid.
-        // e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
-        // You can also use the `req` object to obtain additional parameters
-        // (i.e., the request IP address)
         const ctx = await createTRPCContext({ headers: req?.headers });
         const caller = createCaller(ctx);
 
@@ -59,32 +48,16 @@ export const authConfig = {
         }
 
         try {
-          const user = await caller.user.authenticateUser({
+          return await caller.user.authenticateUser({
             email: credentials.email,
             password: credentials.password,
           });
-          // If no error and we have user data, return it
-          if (user) {
-            return user;
-          }
-          // Return null if user data could not be retrieved or password was incorrect
-          return null;
         } catch (error) {
-          // Handle errors from authenticateUser, e.g., user not found
           console.error("Authentication error:", error);
           return null;
         }
       },
     }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
   ],
   adapter: PrismaAdapter(db),
   pages: {

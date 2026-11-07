@@ -17,7 +17,9 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 - Catálogo público con búsqueda, categorías, destacados y detalle de producto.
 - Carrito persistente en el navegador con cantidades y control de stock al crear pedidos.
 - Checkout preparado para conectar un proveedor de pago; actualmente registra el pedido como pendiente y no almacena datos de tarjeta.
-- Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`.
+- Registro e inicio de sesión con correo y contraseña, verificación de cuenta y recuperación de contraseña mediante Brevo.
+- Perfil con nombre/teléfono opcionales y dirección guardada con municipio y departamento; el checkout permite comprar autenticado o como invitado.
+- Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`; no hay acceso social con GitHub.
 - Panel administrativo en `/admin` con accesos a inventario, alta de productos, pedidos y métricas.
 - Productos con categoría, tallas, colores, imagen, precio, stock y disponibilidad.
 - Cada producto puede marcarse como `Envío inmediato` o `Traer por encargo`, con un plazo estimado en días visible en la ficha, bolsa y checkout.
@@ -25,6 +27,10 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 ## Variables de entorno
 
 Crea `.env` en la raíz y nunca lo subas al repositorio:
+
+Para activar la verificación y recuperación por correo, configura
+`BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (remitente verificado),
+`BREVO_SENDER_NAME` y `APP_URL` (origen de la aplicación que genera los enlaces).
 
 ```env
 DATABASE_URL="postgresql://..."
@@ -54,8 +60,11 @@ npx prisma db push
 npm run dev
 ```
 
-Cuando se agreguen cambios al modelo de productos, ejecuta `npx prisma db push` con
-`DATABASE_URL` configurada para crear los campos nuevos en Neon. Los productos
+Cuando se agreguen cambios al esquema Prisma, ejecuta `npx prisma db push` con
+`DATABASE_URL` configurada para sincronizar la base de datos del entorno elegido.
+Este repositorio aún no tiene migraciones versionadas. Los nuevos campos de
+municipio/departamento admiten valores vacíos para no invalidar registros
+anteriores; el checkout exige esos datos para los pedidos nuevos. Los productos
 existentes quedan configurados por defecto como `READY_TO_SHIP` con `0` días
 adicionales.
 
