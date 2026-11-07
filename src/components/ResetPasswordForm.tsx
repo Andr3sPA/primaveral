@@ -26,7 +26,7 @@ export function ResetPasswordForm({ token }: { token?: string }) {
       <div>
         <h1 className="text-2xl font-semibold">Nueva contraseña</h1>
         <p className="text-muted-foreground mt-2 text-sm">
-          Usa al menos 8 caracteres.
+          Usa al menos 8 caracteres, con mayúscula, minúscula, número y símbolo.
         </p>
       </div>
       {!reset.data && (

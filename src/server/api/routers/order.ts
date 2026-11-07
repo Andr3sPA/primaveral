@@ -42,13 +42,13 @@ export const orderRouter = createTRPCRouter({
       const customer = session
         ? await ctx.db.user.findUnique({
             where: { id: session.id },
-            select: { id: true, email: true, name: true },
+            select: { id: true, email: true, name: true, emailVerified: true },
           })
         : null;
-      if (session && !customer) {
+      if (session && !customer?.emailVerified) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
-          message: "Inicia sesión nuevamente para completar tu pedido.",
+          message: "Verifica tu correo e inicia sesión nuevamente para pedir.",
         });
       }
 

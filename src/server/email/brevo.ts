@@ -2,17 +2,6 @@ import "server-only";
 
 import { env } from "@/env";
 
-export function getAppUrl() {
-  const configuredUrl =
-    env.APP_URL ??
-    process.env.NEXTAUTH_URL ??
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
-
-  return new URL(configuredUrl);
-}
-
 export async function sendBrevoEmail({
   to,
   subject,
@@ -24,16 +13,17 @@ export async function sendBrevoEmail({
   textContent: string;
   htmlContent: string;
 }) {
-  if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) {
+  const apiKey = env.API_KEY_BREVO ?? env.BREVO_API_KEY;
+  if (!apiKey || !env.BREVO_SENDER_EMAIL) {
     throw new Error(
-      "Configura BREVO_API_KEY y BREVO_SENDER_EMAIL para enviar correos.",
+      "Configura API_KEY_BREVO (o BREVO_API_KEY) y BREVO_SENDER_EMAIL para enviar correos.",
     );
   }
 
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      "api-key": env.BREVO_API_KEY,
+      "api-key": apiKey,
       "content-type": "application/json",
     },
     body: JSON.stringify({

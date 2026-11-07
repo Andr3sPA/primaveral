@@ -70,7 +70,7 @@ export function Signup1() {
               <Input
                 type="password"
                 name="password"
-                placeholder="Contraseña (mínimo 8 caracteres)"
+                placeholder="Contraseña (8+ caracteres, mayúscula, número y símbolo)"
                 aria-label="Contraseña"
                 autoComplete="new-password"
                 required
@@ -79,6 +79,10 @@ export function Signup1() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
+              <p className="text-muted-foreground text-xs">
+                Usa al menos 8 caracteres, con mayúscula, minúscula, número y
+                símbolo.
+              </p>
               <Input
                 type="text"
                 name="name"

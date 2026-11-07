@@ -29,8 +29,10 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 Crea `.env` en la raíz y nunca lo subas al repositorio:
 
 Para activar la verificación y recuperación por correo, configura
-`BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (remitente verificado),
-`BREVO_SENDER_NAME` y `APP_URL` (origen de la aplicación que genera los enlaces).
+`API_KEY_BREVO` (también se acepta `BREVO_API_KEY`),
+`BREVO_SENDER_EMAIL` (remitente verificado), `BREVO_SENDER_NAME` y `APP_URL`
+(también se acepta `AUTH_URL`) con el origen de la aplicación que genera los
+enlaces. En producción ese origen debe usar HTTPS.
 
 ```env
 DATABASE_URL="postgresql://..."
@@ -60,13 +62,21 @@ npx prisma db push
 npm run dev
 ```
 
-Cuando se agreguen cambios al esquema Prisma, ejecuta `npx prisma db push` con
-`DATABASE_URL` configurada para sincronizar la base de datos del entorno elegido.
-Este repositorio aún no tiene migraciones versionadas. Los nuevos campos de
+La migración `prisma/migrations/20261107170000_guest_orders` agrega campos
+opcionales para pedidos de invitado, municipio y departamento, y permite
+desvincular una cuenta eliminada sin borrar sus pedidos. Este repositorio aún no
+tiene una migración inicial del esquema: aplica esa migración incremental solo
+en una base que ya tenga el esquema existente. Para una base local vacía,
+sincroniza primero el esquema con `npx prisma db push`, únicamente contra una
+base aislada. No ejecutes `db push` contra producción. Los nuevos campos de
 municipio/departamento admiten valores vacíos para no invalidar registros
-anteriores; el checkout exige esos datos para los pedidos nuevos. Los productos
-existentes quedan configurados por defecto como `READY_TO_SHIP` con `0` días
-adicionales.
+anteriores; el checkout exige esos datos para pedidos nuevos.
+
+El inicio de sesión y los pedidos autenticados requieren un correo verificado.
+Los enlaces de verificación vencen en 24 horas y los de restablecimiento en una
+hora; ambos son de un solo uso y solo se conserva su hash en `VerificationToken`.
+Las solicitudes repetidas de correo tienen un periodo mínimo de espera de un
+minuto. El endpoint de recuperación no revela si existe la cuenta.
 
 Validaciones:
 

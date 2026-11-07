@@ -135,6 +135,15 @@ export function LoginForm({
             ? "Enviando..."
             : "Reenviar correo de verificación"}
         </Button>
+        <p className="text-center text-sm">
+          ¿Necesitas probar otra dirección?{" "}
+          <Link
+            href="/user/resend-verification"
+            className="underline underline-offset-4"
+          >
+            Reenviar desde el formulario
+          </Link>
+        </p>
       </div>
       <div className="text-center text-sm">
         ¿No tienes una cuenta?{" "}

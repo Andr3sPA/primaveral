@@ -57,9 +57,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!isHydrated) return;
     localStorage.setItem("primaveral-cart", JSON.stringify(items));
     window.dispatchEvent(new Event("cartUpdated"));
-  }, [items]);
+  }, [items, isHydrated]);
 
   const sameItem = (
     item: CartItem,

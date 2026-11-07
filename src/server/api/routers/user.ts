@@ -1,5 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
-import { Role, type PrismaClient } from "@prisma/client";
+import { Prisma, Role, type PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -9,20 +8,26 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
-import { getAppUrl, sendBrevoEmail } from "@/server/email/brevo";
+import {
+  accountActionUrl,
+  accountTokenExpiry,
+  accountTokenIdentifier,
+  createAccountToken,
+  digestAccountToken,
+  type AccountTokenPurpose,
+} from "@/server/auth/account-tokens";
+import { sendBrevoEmail } from "@/server/email/brevo";
 
 const DUMMY_PASSWORD_HASH =
   "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 const passwordSchema = z
   .string()
   .min(8, { message: "La contraseña debe tener al menos 8 caracteres." })
-  .max(128, { message: "La contraseña no puede superar 128 caracteres." });
-
-type EmailTokenPurpose = "verification" | "password-reset";
-
-function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
-}
+  .max(128, { message: "La contraseña no puede superar 128 caracteres." })
+  .regex(/[A-Z]/, { message: "Incluye al menos una letra mayúscula." })
+  .regex(/[a-z]/, { message: "Incluye al menos una letra minúscula." })
+  .regex(/[0-9]/, { message: "Incluye al menos un número." })
+  .regex(/[^A-Za-z0-9]/, { message: "Incluye al menos un símbolo." });
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
@@ -41,25 +46,22 @@ async function sendAccountTokenEmail(
   db: PrismaClient,
   email: string,
   name: string | null,
-  purpose: EmailTokenPurpose,
+  purpose: AccountTokenPurpose,
 ) {
-  const identifier = `${purpose}:${email}`;
-  const token = randomBytes(32).toString("hex");
-  const expires = new Date(
-    Date.now() + (purpose === "verification" ? 24 : 1) * 60 * 60 * 1000,
-  );
-  const url = new URL(
-    purpose === "verification" ? "/user/verify-email" : "/user/reset-password",
-    getAppUrl(),
-  );
-  url.searchParams.set("token", token);
+  const identifier = accountTokenIdentifier(purpose, email);
+  const token = createAccountToken();
+  const actionUrl = accountActionUrl(purpose, token);
 
-  await db.$transaction([
-    db.verificationToken.deleteMany({ where: { identifier } }),
-    db.verificationToken.create({
-      data: { identifier, token: hashToken(token), expires },
-    }),
-  ]);
+  await db.$transaction(async (tx) => {
+    await tx.verificationToken.deleteMany({ where: { identifier } });
+    await tx.verificationToken.create({
+      data: {
+        identifier,
+        token: digestAccountToken(token),
+        expires: accountTokenExpiry(purpose),
+      },
+    });
+  });
 
   const trimmedName = name?.trim();
   const displayName = escapeHtml(trimmedName ?? "Hola");
@@ -70,19 +72,52 @@ async function sendAccountTokenEmail(
   const action = isVerification
     ? "Verificar mi correo"
     : "Restablecer contraseña";
-  const textContent = `${displayName}, abre este enlace para ${isVerification ? "verificar tu cuenta" : "cambiar tu contraseña"}: ${url.toString()}`;
+  const textContent = `${displayName}, abre este enlace para ${isVerification ? "verificar tu cuenta" : "cambiar tu contraseña"}: ${actionUrl}`;
 
-  await sendBrevoEmail({
-    to: email,
-    subject,
-    textContent,
-    htmlContent: `<p>${displayName},</p><p>${isVerification ? "Verifica tu cuenta de Primaveral Bordados" : "Solicitaste cambiar tu contraseña"}.</p><p><a href="${url.toString()}">${action}</a></p><p>El enlace vence en ${isVerification ? "24 horas" : "1 hora"}. Si no solicitaste esto, ignora este correo.</p>`,
-  });
+  try {
+    await sendBrevoEmail({
+      to: email,
+      subject,
+      textContent,
+      htmlContent: `<p>${displayName},</p><p>${isVerification ? "Verifica tu cuenta de Primaveral Bordados" : "Solicitaste cambiar tu contraseña"}.</p><p><a href="${actionUrl}">${action}</a></p><p>El enlace vence en ${isVerification ? "24 horas" : "1 hora"}. Si no solicitaste esto, ignora este correo.</p>`,
+    });
+  } catch (error) {
+    await db.verificationToken.deleteMany({
+      where: { identifier, token: digestAccountToken(token) },
+    });
+    console.error(
+      "No se pudo enviar el correo de cuenta mediante Brevo.",
+      error,
+    );
+    return false;
+  }
+
+  return true;
 }
 
 const emailInput = z.object({
   email: z.string().trim().email().max(254),
 });
+
+async function isAccountEmailOnCooldown(
+  db: PrismaClient,
+  purpose: AccountTokenPurpose,
+  email: string,
+) {
+  const tokenLifetime =
+    purpose === "verification" ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
+
+  return Boolean(
+    await db.verificationToken.findFirst({
+      where: {
+        identifier: accountTokenIdentifier(purpose, email),
+        expires: {
+          gt: new Date(Date.now() + tokenLifetime - 60 * 1000),
+        },
+      },
+    }),
+  );
+}
 
 export const userRouter = createTRPCRouter({
   authenticateUser: publicProcedure
@@ -220,20 +255,35 @@ export const userRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const email = input.email.toLowerCase();
-      const existingUser = await ctx.db.user.findUnique({ where: { email } });
+      let existingUser = await ctx.db.user.findUnique({ where: { email } });
 
       if (!existingUser) {
-        await ctx.db.user.create({
-          data: {
-            name: input.name?.trim() ? input.name : null,
-            phone: input.phone?.trim() ? input.phone : null,
-            email,
-            password: await bcrypt.hash(input.password, 10),
-          },
-        });
+        try {
+          existingUser = await ctx.db.user.create({
+            data: {
+              name: input.name?.trim() ? input.name : null,
+              phone: input.phone?.trim() ? input.phone : null,
+              email,
+              password: await bcrypt.hash(input.password, 10),
+            },
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+          ) {
+            existingUser = await ctx.db.user.findUnique({ where: { email } });
+          } else {
+            throw error;
+          }
+        }
       }
 
-      if (!existingUser?.emailVerified) {
+      if (
+        existingUser &&
+        !existingUser.emailVerified &&
+        !(await isAccountEmailOnCooldown(ctx.db, "verification", email))
+      ) {
         await sendAccountTokenEmail(
           ctx.db,
           email,
@@ -253,7 +303,11 @@ export const userRouter = createTRPCRouter({
       const email = input.email.toLowerCase();
       const user = await ctx.db.user.findUnique({ where: { email } });
 
-      if (user && !user.emailVerified) {
+      if (
+        user &&
+        !user.emailVerified &&
+        !(await isAccountEmailOnCooldown(ctx.db, "verification", email))
+      ) {
         await sendAccountTokenEmail(ctx.db, email, user.name, "verification");
       }
 
@@ -265,7 +319,7 @@ export const userRouter = createTRPCRouter({
   verifyEmail: publicProcedure
     .input(z.object({ token: z.string().min(1).max(128) }))
     .mutation(async ({ ctx, input }) => {
-      const token = hashToken(input.token);
+      const token = digestAccountToken(input.token);
       await ctx.db.$transaction(async (tx) => {
         const tokenRecord = await tx.verificationToken.findUnique({
           where: { token },
@@ -317,7 +371,10 @@ export const userRouter = createTRPCRouter({
       const email = input.email.toLowerCase();
       const user = await ctx.db.user.findUnique({ where: { email } });
 
-      if (user?.emailVerified) {
+      if (
+        user?.emailVerified &&
+        !(await isAccountEmailOnCooldown(ctx.db, "password-reset", email))
+      ) {
         await sendAccountTokenEmail(ctx.db, email, user.name, "password-reset");
       }
 
@@ -335,7 +392,7 @@ export const userRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const password = await bcrypt.hash(input.password, 10);
-      const token = hashToken(input.token);
+      const token = digestAccountToken(input.token);
       await ctx.db.$transaction(async (tx) => {
         const tokenRecord = await tx.verificationToken.findUnique({
           where: { token },
