@@ -7,6 +7,7 @@ import {
   getPublicErrorMessage,
   getSafeErrorMetadata,
 } from "../src/server/api/error-messages";
+import { accountActionUrl } from "../src/server/auth/account-tokens";
 import { runVercelBuild } from "../scripts/vercel-build.mjs";
 import { z } from "zod";
 
@@ -258,11 +259,61 @@ function emailToken(email: { htmlContent: string }) {
   return new URL(match[1]).searchParams.get("token")!;
 }
 
+test("account email links use only the explicit canonical APP_URL", () => {
+  const previous = {
+    APP_URL: process.env.APP_URL,
+    AUTH_URL: process.env.AUTH_URL,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    VERCEL_URL: process.env.VERCEL_URL,
+    NODE_ENV: process.env.NODE_ENV,
+  };
+
+  try {
+    Reflect.set(process.env, "NODE_ENV", "production");
+    process.env.APP_URL = "https://shop.example.test";
+    process.env.AUTH_URL = "https://auth.example.test";
+    process.env.NEXTAUTH_URL = "https://nextauth.example.test";
+    process.env.VERCEL_URL = "preview-123.example.test";
+
+    const verification = new URL(
+      accountActionUrl("verification", "token&with=special chars"),
+    );
+    assert.equal(verification.origin, "https://shop.example.test");
+    assert.equal(verification.pathname, "/user/verify-email");
+    assert.equal(
+      verification.searchParams.get("token"),
+      "token&with=special chars",
+    );
+
+    const reset = new URL(accountActionUrl("password-reset", "reset-token"));
+    assert.equal(reset.origin, "https://shop.example.test");
+    assert.equal(reset.pathname, "/user/reset-password");
+
+    process.env.APP_URL = "";
+    assert.throws(
+      () => accountActionUrl("verification", "token"),
+      /APP_URL is required/i,
+      "production never falls back to deployment or auth hostnames",
+    );
+    process.env.APP_URL = "https://shop.example.test/nested";
+    assert.throws(
+      () => accountActionUrl("verification", "token"),
+      /canonical HTTP\(S\) origin/i,
+    );
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
 test("the complete account and checkout flow works with an in-memory database and mocked mail", async () => {
   const { database, users, verificationTokens, orders } =
     createMemoryDatabase();
   const sentEmails: Array<{
     htmlContent: string;
+    textContent: string;
     to: Array<{ email: string }>;
   }> = [];
   const originalFetch = globalThis.fetch;
@@ -287,6 +338,14 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(users.get(email)?.emailVerified, null);
     assert.equal(sentEmails.length, 1);
     assert.equal(sentEmails[0]?.to[0]?.email, email);
+    const verificationLink = new URL(
+      sentEmails[0]!.htmlContent.match(/href="([^"]+)"/)![1]!,
+    );
+    assert.equal(verificationLink.origin, "http://localhost:3000");
+    assert.equal(verificationLink.pathname, "/user/verify-email");
+    assert.match(sentEmails[0]!.htmlContent, /Destino: localhost:3000/);
+    assert.match(sentEmails[0]!.htmlContent, /Enlace directo: <a href=/);
+    assert.match(sentEmails[0]!.textContent, /http:\/\/localhost:3000/);
     const user = users.get(email)!;
     await caller.user.registerUser({ email, password });
     assert.equal(users.size, 1, "duplicate registration keeps the same user");
@@ -309,6 +368,11 @@ test("the complete account and checkout flow works with an in-memory database an
       token: emailToken(sentEmails[0]!),
     });
     assert.match(verified.message, /correo quedó confirmado/i);
+    await assert.rejects(
+      caller.user.verifyEmail({ token: emailToken(sentEmails[0]!) }),
+      /no funciona o ya venció/i,
+      "verification links are single use",
+    );
     assert.ok(user.emailVerified);
     assert.equal(
       (await caller.user.authenticateUser({ email, password }))?.id,
@@ -345,6 +409,11 @@ test("the complete account and checkout flow works with an in-memory database an
     });
     assert.deepEqual(resetResponse, unknownResetResponse);
     assert.equal(sentEmails.length, 4);
+    const resetLink = new URL(
+      sentEmails[3]!.htmlContent.match(/href="([^"]+)"/)![1]!,
+    );
+    assert.equal(resetLink.origin, "http://localhost:3000");
+    assert.equal(resetLink.pathname, "/user/reset-password");
     await assert.rejects(
       caller.user.resetPassword({
         token: "invalid-token",
@@ -356,6 +425,14 @@ test("the complete account and checkout flow works with an in-memory database an
       token: emailToken(sentEmails[3]!),
       password: "NewPassword2!",
     });
+    await assert.rejects(
+      caller.user.resetPassword({
+        token: emailToken(sentEmails[3]!),
+        password: "AnotherPassword3!",
+      }),
+      /no funciona o ya venció/i,
+      "password-reset links are single use",
+    );
     assert.equal(
       await caller.user.authenticateUser({ email, password }),
       null,
@@ -409,6 +486,31 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(registeredOrder.userId, user.id);
     assert.equal(user.municipality, "Bogotá");
     assert.equal(orders.length, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a Brevo failure does not leave a usable account verification link", async () => {
+  const { database, users, verificationTokens } = createMemoryDatabase();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 503 });
+
+  try {
+    const caller = createCaller(createContext(database));
+    const email = "mail-failure@example.test";
+    const result = await caller.user.registerUser({
+      email,
+      password: "TestPassword1!",
+    });
+
+    assert.match(result.message, /recibirás un mensaje/i);
+    assert.equal(users.get(email)?.emailVerified, null);
+    assert.equal(
+      verificationTokens.some((item) => item.identifier.endsWith(email)),
+      false,
+      "an undelivered email's token is removed",
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

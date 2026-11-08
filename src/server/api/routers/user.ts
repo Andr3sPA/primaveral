@@ -77,14 +77,16 @@ async function sendAccountTokenEmail(
   const requestDescription = isVerification
     ? "confirmar tu cuenta de Primaveral Bordados"
     : "cambiar tu contraseña";
-  const textContent = `${displayName}, abre este enlace para ${requestDescription}: ${actionUrl} El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.`;
+  const actionHost = new URL(actionUrl).host;
+  const safeActionUrl = escapeHtml(actionUrl);
+  const textContent = `${trimmedName ?? "Hola"}, abre este enlace para ${requestDescription}: ${actionUrl} (dominio: ${actionHost}). El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.`;
 
   try {
     await sendBrevoEmail({
       to: email,
       subject,
       textContent,
-      htmlContent: `<p>${displayName},</p><p>Abre el enlace para ${requestDescription}.</p><p><a href="${actionUrl}">${action}</a></p><p>El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.</p>`,
+      htmlContent: `<p>${displayName},</p><p>Abre el enlace para ${requestDescription}.</p><p><a href="${safeActionUrl}">${action}</a></p><p>Destino: ${escapeHtml(actionHost)}</p><p>Enlace directo: <a href="${safeActionUrl}">${safeActionUrl}</a></p><p>El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.</p>`,
     });
   } catch (error) {
     await db.verificationToken.deleteMany({

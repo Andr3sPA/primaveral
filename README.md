@@ -30,9 +30,20 @@ Crea `.env` en la raíz y nunca lo subas al repositorio:
 
 Para activar la verificación y recuperación por correo, configura
 `API_KEY_BREVO` (también se acepta `BREVO_API_KEY`),
-`BREVO_SENDER_EMAIL` (remitente verificado), `BREVO_SENDER_NAME` y `APP_URL`
-(también se acepta `AUTH_URL`) con el origen de la aplicación que genera los
-enlaces. En producción ese origen debe usar HTTPS.
+`BREVO_SENDER_EMAIL` (remitente verificado), `BREVO_SENDER_NAME` y `APP_URL`.
+`APP_URL` debe ser el origen público canónico de la aplicación (por ejemplo,
+`https://www.tudominio.com`), sin ruta, query ni fragmento. Los enlaces de
+verificación y recuperación siempre se generan desde esa variable y apuntan a
+`/user/verify-email` o `/user/reset-password`; no se infieren del dominio de la
+solicitud ni de `VERCEL_URL`, `AUTH_URL` o `NEXTAUTH_URL`. En producción debe
+usar HTTPS. Define un `APP_URL` explícito en cada entorno de Vercel y no uses la
+URL efímera de una Preview como dirección de correo. El mensaje HTML y su
+versión de texto muestran el dominio y el enlace absoluto para que el destino
+sea visible.
+
+El código envía a Brevo el enlace directo y no activa reescritura ni seguimiento
+de clics en el mensaje. Si Brevo transforma el destino al entregar, revisa la
+opción de seguimiento de clics de enlaces en la configuración de Brevo.
 
 ```env
 DATABASE_URL="postgresql://..."

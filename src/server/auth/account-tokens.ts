@@ -29,19 +29,17 @@ export function accountTokenExpiry(purpose: AccountTokenPurpose) {
 }
 
 export function accountActionUrl(purpose: AccountTokenPurpose, token: string) {
-  const configuredOrigin =
-    process.env.APP_URL ??
-    process.env.AUTH_URL ??
-    process.env.NEXTAUTH_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
-  const origin =
-    configuredOrigin ??
-    (process.env.NODE_ENV === "production"
+  const configuredOrigin = process.env.APP_URL?.trim();
+  const origin = configuredOrigin?.length
+    ? configuredOrigin
+    : process.env.NODE_ENV === "production"
       ? undefined
-      : "http://localhost:3000");
+      : "http://localhost:3000";
 
   if (!origin) {
-    throw new Error("APP_URL or AUTH_URL is required in production.");
+    throw new Error(
+      "APP_URL is required to send account emails in production.",
+    );
   }
 
   const url = new URL(origin);
@@ -49,9 +47,14 @@ export function accountActionUrl(purpose: AccountTokenPurpose, token: string) {
     (process.env.NODE_ENV === "production" && url.protocol !== "https:") ||
     (url.protocol !== "https:" && url.protocol !== "http:") ||
     url.username ||
-    url.password
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
   ) {
-    throw new Error("APP_URL or AUTH_URL must be a public HTTP(S) origin.");
+    throw new Error(
+      "APP_URL must be a canonical HTTP(S) origin without a path.",
+    );
   }
   url.pathname =
     purpose === "verification" ? "/user/verify-email" : "/user/reset-password";

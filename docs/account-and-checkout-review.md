@@ -28,7 +28,7 @@
 - Los pedidos de invitados guardan correo y nombre opcional; el vínculo a usuario y el teléfono son opcionales. Municipio y departamento son opcionales en el modelo para conservar registros preexistentes, pero obligatorios al crear nuevos pedidos desde el checkout.
 - Se añadió la protección de hidratación del carrito para no sobrescribir su contenido guardado mientras se restaura desde `localStorage`.
 - Los correos de cuenta tienen un periodo de espera de un minuto para limitar reenvíos; las URLs requieren HTTPS en producción. Los fallos de entrega quedan registrados y el token no enviado se elimina; las respuestas de recuperación se mantienen uniformes para no revelar cuentas.
-- Brevo se integra con su API HTTP, sin agregar dependencias. Se configura con `API_KEY_BREVO` o `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` y `APP_URL` o `AUTH_URL`; no se guardan secretos en el repositorio.
+- Brevo se integra con su API HTTP, sin agregar dependencias. Se configura con `API_KEY_BREVO` o `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` y `APP_URL` como origen público canónico; `AUTH_URL` no determina el destino de los correos. No se guardan secretos en el repositorio.
 
 ## Aplicación local y Brevo
 
