@@ -29,11 +29,11 @@ export function Signup1() {
   };
 
   return (
-    <section className="bg-muted min-h-[calc(100svh-2rem)] py-2 sm:py-6">
+    <section className="min-h-[calc(100svh-2rem)] py-2 sm:py-6">
       <div className="flex min-h-full items-center justify-center">
         <form
           onSubmit={handleSubmit}
-          className="border-muted flex w-full max-w-sm flex-col items-center gap-y-8 rounded-md border bg-white px-4 py-8 shadow-md sm:px-6 sm:py-12"
+          className="bg-card/95 flex w-full max-w-sm flex-col items-center gap-y-8 rounded-2xl border border-stone-200 px-4 py-8 shadow-sm backdrop-blur sm:px-6 sm:py-12"
         >
           <div className="flex flex-col items-center gap-y-2">
             <h1 className="text-center text-3xl font-semibold">Crear cuenta</h1>

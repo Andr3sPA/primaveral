@@ -15,6 +15,7 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 ## Funcionalidades
 
 - Catálogo público con búsqueda, categorías, destacados y detalle de producto.
+- Identidad visual floral con navegación adaptable, catálogo accesible y enlaces de contacto.
 - Carrito persistente en el navegador con cantidades y control de stock al crear pedidos.
 - Checkout preparado para conectar un proveedor de pago; actualmente registra el pedido como pendiente y no almacena datos de tarjeta.
 - Registro e inicio de sesión con correo y contraseña, verificación de cuenta y recuperación de contraseña mediante Brevo.
@@ -37,13 +38,18 @@ verificación y recuperación siempre se generan desde esa variable y apuntan a
 `/user/verify-email` o `/user/reset-password`; no se infieren del dominio de la
 solicitud ni de `VERCEL_URL`, `AUTH_URL` o `NEXTAUTH_URL`. En producción debe
 usar HTTPS. Define un `APP_URL` explícito en cada entorno de Vercel y no uses la
-URL efímera de una Preview como dirección de correo. El mensaje HTML y su
-versión de texto muestran el dominio y el enlace absoluto para que el destino
-sea visible.
+URL efímera de una Preview como dirección de correo. El mensaje HTML presenta
+un botón claro y no muestra la URL larga; la versión de texto incluye el enlace
+directo para que también pueda abrirse desde lectores sin formato HTML.
 
-El código envía a Brevo el enlace directo y no activa reescritura ni seguimiento
-de clics en el mensaje. Si Brevo transforma el destino al entregar, revisa la
-opción de seguimiento de clics de enlaces en la configuración de Brevo.
+La aplicación envía a Brevo el enlace directo a `APP_URL` y no configura
+seguimiento de clics en la solicitud. No podemos ver desde el código si el
+seguimiento está activado en la cuenta de Brevo. Si el enlace recibido pasa por
+`sendibt2.com`, revisa en el panel de Brevo la opción de seguimiento de clics y
+desactívala si quieres conservar el destino directo; después, envía un correo de
+prueba y comprueba el enlace del botón. Si el destino final es una URL de
+Preview de Vercel, corrige `APP_URL` en las variables del entorno de producción:
+la aplicación nunca usa `VERCEL_URL` para crear enlaces de cuenta.
 
 ```env
 DATABASE_URL="postgresql://..."

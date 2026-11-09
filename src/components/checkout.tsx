@@ -147,7 +147,7 @@ export function Checkout() {
 
   if (!isHydrated || sessionStatus === "loading") {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
+      <main className="botanical-page mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
         Cargando tu carrito...
       </main>
     );
@@ -155,11 +155,13 @@ export function Checkout() {
 
   if (createOrder.isSuccess) {
     return (
-      <main className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
+      <main className="botanical-page mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
           <LockKeyhole />
         </div>
-        <h1 className="mt-6 text-3xl font-medium">¡Pedido recibido!</h1>
+        <h1 className="font-display mt-6 text-3xl font-semibold text-[#48235c]">
+          ¡Pedido recibido!
+        </h1>
         <p className="mt-3 text-stone-500">
           Te contactaremos para confirmar los detalles y el pago. Gracias por
           elegir piezas hechas con calma.
@@ -172,23 +174,25 @@ export function Checkout() {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
+    <main className="botanical-page mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
       <section>
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-8 text-sm text-stone-500 hover:text-stone-900"
+          className="mb-6 inline-flex min-h-11 items-center text-base font-medium text-[#48235c] underline-offset-4 hover:underline sm:mb-8"
         >
           ← Volver a la colección
         </button>
-        <h1 className="text-3xl font-medium sm:text-4xl">Finalizar pedido</h1>
-        <p className="mt-2 text-stone-500">
+        <h1 className="font-display text-3xl font-semibold text-[#48235c] sm:text-4xl">
+          Finalizar pedido
+        </h1>
+        <p className="mt-2 text-base leading-7 text-[#514060]">
           {isAuthenticated
             ? "Elige una dirección guardada o indica una nueva."
             : "Puedes completar tu compra sin crear una cuenta."}
         </p>
-        <Card className="mt-8 border-stone-200 shadow-none">
-          <CardContent className="p-6 sm:p-8">
+        <Card className="mt-8 rounded-2xl border-[#e7dbea] bg-white shadow-sm">
+          <CardContent className="p-4 sm:p-8">
             <Form {...form}>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {!isAuthenticated && (
@@ -236,7 +240,9 @@ export function Checkout() {
                 )}
                 {isAuthenticated && hasSavedAddress && (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium">Dirección de entrega</p>
+                    <p className="text-base font-semibold text-[#35203f]">
+                      Dirección de entrega
+                    </p>
                     <RadioGroup
                       value={addressMode}
                       onValueChange={(value) => {
@@ -246,19 +252,19 @@ export function Checkout() {
                       }}
                       className="grid gap-3"
                     >
-                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-stone-200 p-4">
+                      <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border border-[#d9c9df] p-4">
                         <RadioGroupItem value="saved" className="mt-1" />
                         <span className="text-sm">
                           <span className="block font-medium">
                             Usar mi dirección guardada
                           </span>
-                          <span className="text-stone-500">
+                          <span className="text-[#514060]">
                             {profile?.address}, {profile?.municipality},{" "}
                             {profile?.department}
                           </span>
                         </span>
                       </label>
-                      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 p-4">
+                      <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#d9c9df] p-4">
                         <RadioGroupItem value="new" />
                         <span className="text-sm font-medium">
                           Usar otra dirección
@@ -366,11 +372,13 @@ export function Checkout() {
                     Guardar esta dirección en mi perfil
                   </label>
                 )}
-                <div className="rounded-xl border border-stone-200 p-4">
-                  <p className="text-base font-medium">Forma de pago</p>
-                  <p className="mt-2 flex items-center gap-2 text-stone-700">
+                <div className="rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4">
+                  <p className="text-base font-semibold text-[#35203f]">
+                    Forma de pago
+                  </p>
+                  <p className="mt-2 flex items-center gap-2 text-[#514060]">
                     <WalletCards
-                      className="h-5 w-5 shrink-0 text-stone-500"
+                      className="h-5 w-5 shrink-0 text-[#684281]"
                       aria-hidden="true"
                     />
                     Pago al recibir el pedido
@@ -400,7 +408,7 @@ export function Checkout() {
                     !items.length ||
                     (isAuthenticated && profileQuery.isLoading)
                   }
-                  className="min-h-12 w-full rounded-full"
+                  className="min-h-12 w-full rounded-full bg-[#48235c] text-base font-semibold text-white hover:bg-[#382047]"
                 >
                   {createOrder.isPending ? (
                     <Loader2 className="animate-spin" />
@@ -414,91 +422,97 @@ export function Checkout() {
         </Card>
       </section>
       <aside>
-        <Card className="border-stone-200 shadow-none">
-          <CardContent className="p-6">
-            <h2 className="text-lg font-medium">Resumen</h2>
+        <Card className="rounded-2xl border-[#e7dbea] bg-white shadow-sm">
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="font-display text-xl font-semibold text-[#48235c]">
+              Resumen
+            </h2>
             <div className="mt-5 space-y-4">
               {items.map((item) => (
                 <div
                   key={`${item.id}-${item.size}-${item.color}`}
-                  className="flex items-center gap-3"
+                  className="flex flex-col gap-3 border-b border-[#eee5f0] py-4 last:border-b-0 sm:flex-row sm:items-center"
                 >
-                  <div className="h-14 w-14 overflow-hidden rounded-lg bg-stone-100">
-                    {item.imageUrl && (
-                      <Image
-                        src={item.imageUrl}
-                        alt=""
-                        width={56}
-                        height={56}
-                        className="h-full w-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.title}</p>
-                    <p className="text-sm text-stone-500">
-                      {item.prefix}
-                      {item.price.toFixed(2)}
-                    </p>
-                    {item.fulfillmentType === "SOURCED_TO_ORDER" &&
-                      item.leadTimeDays &&
-                      item.leadTimeDays > 0 && (
-                        <p className="mt-1 text-xs text-amber-700">
-                          Preparación estimada: {item.leadTimeDays}{" "}
-                          {item.leadTimeDays === 1 ? "día" : "días"}
-                        </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f2eaf5]">
+                      {item.imageUrl && (
+                        <Image
+                          src={item.imageUrl}
+                          alt=""
+                          width={56}
+                          height={56}
+                          className="h-full w-full object-cover"
+                        />
                       )}
-                    <div className="mt-1 flex items-center gap-2">
-                      <button
-                        type="button"
-                        aria-label={`Quitar una unidad de ${item.title}`}
-                        onClick={() =>
-                          updateQuantity(
-                            item.id,
-                            item.quantity - 1,
-                            item.size,
-                            item.color,
-                          )
-                        }
-                        className="grid min-h-11 min-w-11 place-items-center rounded-full border p-1"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="text-base">{item.quantity}</span>
-                      <button
-                        type="button"
-                        aria-label={`Agregar una unidad de ${item.title}`}
-                        onClick={() =>
-                          updateQuantity(
-                            item.id,
-                            item.quantity + 1,
-                            item.size,
-                            item.color,
-                          )
-                        }
-                        className="grid min-h-11 min-w-11 place-items-center rounded-full border p-1"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeItem(item.id, item.size, item.color)
-                        }
-                        className="ml-2 inline-flex min-h-11 items-center px-2 text-sm text-stone-600 hover:text-red-700"
-                      >
-                        Quitar
-                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-medium break-words text-[#35203f]">
+                        {item.title}
+                      </p>
+                      <p className="text-base text-[#514060]">
+                        {item.prefix}
+                        {item.price.toFixed(2)}
+                      </p>
+                      {item.fulfillmentType === "SOURCED_TO_ORDER" &&
+                        item.leadTimeDays &&
+                        item.leadTimeDays > 0 && (
+                          <p className="mt-1 text-sm text-[#514060]">
+                            Preparación estimada: {item.leadTimeDays}{" "}
+                            {item.leadTimeDays === 1 ? "día" : "días"}
+                          </p>
+                        )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Quitar una unidad de ${item.title}`}
+                          onClick={() =>
+                            updateQuantity(
+                              item.id,
+                              item.quantity - 1,
+                              item.size,
+                              item.color,
+                            )
+                          }
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-[#bcaac5] text-[#48235c] hover:bg-[#f5eaf4]"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="text-base">{item.quantity}</span>
+                        <button
+                          type="button"
+                          aria-label={`Agregar una unidad de ${item.title}`}
+                          onClick={() =>
+                            updateQuantity(
+                              item.id,
+                              item.quantity + 1,
+                              item.size,
+                              item.color,
+                            )
+                          }
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-[#bcaac5] text-[#48235c] hover:bg-[#f5eaf4]"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeItem(item.id, item.size, item.color)
+                          }
+                          className="inline-flex min-h-11 items-center px-2 text-base text-[#48235c] underline-offset-4 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-sm font-medium">
+                  <p className="self-end text-base font-semibold text-[#35203f] sm:self-center">
                     {item.prefix}
                     {(item.price * item.quantity).toFixed(2)}
                   </p>
                 </div>
               ))}
             </div>
-            <div className="mt-6 flex justify-between border-t border-stone-200 pt-5 font-semibold">
+            <div className="mt-6 flex justify-between border-t border-[#e7dbea] pt-5 text-lg font-semibold text-[#35203f]">
               <span>Total</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>

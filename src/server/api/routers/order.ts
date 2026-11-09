@@ -7,28 +7,28 @@ import {
   publicProcedure,
 } from "@/server/api/trpc";
 
-export const orderRouter = createTRPCRouter({
-  createNew: publicProcedure
-    .input(
+export const createOrderInputSchema = z.object({
+  items: z
+    .array(
       z.object({
-        items: z
-          .array(
-            z.object({
-              productId: z.string().cuid(),
-              quantity: z.number().int().min(1).max(20),
-            }),
-          )
-          .min(1),
-        address: z.string().trim().min(8).max(250),
-        municipality: z.string().trim().min(2).max(100),
-        department: z.string().trim().min(2).max(100),
-        phone: z.string().trim().max(30).optional(),
-        email: z.string().trim().email().max(254).optional(),
-        name: z.string().trim().max(100).optional(),
-        saveAddress: z.boolean().default(false),
-        paymentMethod: z.enum(["credit-card", "cash"]),
+        productId: z.string().cuid(),
+        quantity: z.number().int().min(1).max(20),
       }),
     )
+    .min(1),
+  address: z.string().trim().min(8).max(250),
+  municipality: z.string().trim().min(2).max(100),
+  department: z.string().trim().min(2).max(100),
+  phone: z.string().trim().max(30).optional(),
+  email: z.string().trim().email().max(254).optional(),
+  name: z.string().trim().max(100).optional(),
+  saveAddress: z.boolean().default(false),
+  paymentMethod: z.literal("cash"),
+});
+
+export const orderRouter = createTRPCRouter({
+  createNew: publicProcedure
+    .input(createOrderInputSchema)
     .mutation(async ({ ctx, input }) => {
       const session = ctx.session?.user;
       if (!session && !input.email) {

@@ -12,10 +12,12 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { CartProvider } from "@/contexts/CartContext";
 import { SessionProvider } from "next-auth/react";
 import { NavbarClient } from "@/components/navbar-client";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
-  title: "Primaveral Bordados | Prendas con historia",
-  description: "Ropa bordada y piezas hechas con calma para acompañarte.",
+  title: "Primaveral | Bordados de Cartago en Medellín",
+  description:
+    "Arte que se viste, tradición que perdura. Prendas de vestir exclusivas bordadas a mano de Cartago en Medellín.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -70,6 +72,7 @@ export default function RootLayout({
                 </Suspense>
               </NuqsAdapter>
             </CartProvider>
+            <SiteFooter />
           </SessionProvider>
         </TRPCReactProvider>
         {/* Toaster para notificaciones globales */}

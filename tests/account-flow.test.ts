@@ -19,6 +19,9 @@ process.env.BREVO_SENDER_EMAIL = "sender@example.test";
 process.env.APP_URL = "http://localhost:3000";
 
 const { createCaller } = await import("../src/server/api/root");
+const { createOrderInputSchema } = await import(
+  "../src/server/api/routers/order"
+);
 
 type TestUser = {
   id: string;
@@ -316,6 +319,11 @@ test("the complete account and checkout flow works with an in-memory database an
     textContent: string;
     to: Array<{ email: string }>;
   }> = [];
+  const previousEmailEnv = {
+    APP_URL: process.env.APP_URL,
+    VERCEL_URL: process.env.VERCEL_URL,
+    NODE_ENV: process.env.NODE_ENV,
+  };
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     assert.equal(String(input), "https://api.brevo.com/v3/smtp/email");
@@ -326,6 +334,10 @@ test("the complete account and checkout flow works with an in-memory database an
   };
 
   try {
+    process.env.APP_URL = "https://primaveral.example.test";
+    process.env.VERCEL_URL = "preview-123.example.test";
+    Reflect.set(process.env, "NODE_ENV", "production");
+
     const caller = createCaller(createContext(database));
     const email = "customer@example.test";
     const password = "TestPassword1!";
@@ -341,11 +353,27 @@ test("the complete account and checkout flow works with an in-memory database an
     const verificationLink = new URL(
       sentEmails[0]!.htmlContent.match(/href="([^"]+)"/)![1]!,
     );
-    assert.equal(verificationLink.origin, "http://localhost:3000");
+    assert.equal(verificationLink.origin, "https://primaveral.example.test");
     assert.equal(verificationLink.pathname, "/user/verify-email");
-    assert.match(sentEmails[0]!.htmlContent, /Destino: localhost:3000/);
-    assert.match(sentEmails[0]!.htmlContent, /Enlace directo: <a href=/);
-    assert.match(sentEmails[0]!.textContent, /http:\/\/localhost:3000/);
+    assert.notEqual(verificationLink.host, process.env.VERCEL_URL);
+    assert.match(sentEmails[0]!.htmlContent, /Confirmar mi correo/);
+    assert.match(sentEmails[0]!.htmlContent, /Primaveral/);
+    assert.match(sentEmails[0]!.htmlContent, /vence en 24 horas/i);
+    assert.doesNotMatch(
+      sentEmails[0]!.htmlContent.replace(/href="[^"]+"/g, ""),
+      /https?:\/\/|preview-123/,
+    );
+    assert.equal(
+      sentEmails[0]!.htmlContent
+        .replace(/<[^>]*>/g, " ")
+        .includes(verificationLink.searchParams.get("token")!),
+      false,
+      "the verification token appears only in the button destination",
+    );
+    assert.match(
+      sentEmails[0]!.textContent,
+      /https:\/\/primaveral\.example\.test\/user\/verify-email/,
+    );
     const user = users.get(email)!;
     await caller.user.registerUser({ email, password });
     assert.equal(users.size, 1, "duplicate registration keeps the same user");
@@ -399,6 +427,10 @@ test("the complete account and checkout flow works with an in-memory database an
     pendingToken.expires = new Date(Date.now() - 1);
     await caller.user.requestEmailVerification({ email: pendingEmail });
     assert.equal(sentEmails.length, 3, "an expired cooldown permits a resend");
+    assert.equal(
+      new URL(sentEmails[2]!.htmlContent.match(/href="([^"]+)"/)![1]!).origin,
+      "https://primaveral.example.test",
+    );
     await caller.user.verifyEmail({
       token: emailToken(sentEmails[2]!),
     });
@@ -412,8 +444,21 @@ test("the complete account and checkout flow works with an in-memory database an
     const resetLink = new URL(
       sentEmails[3]!.htmlContent.match(/href="([^"]+)"/)![1]!,
     );
-    assert.equal(resetLink.origin, "http://localhost:3000");
+    assert.equal(resetLink.origin, "https://primaveral.example.test");
     assert.equal(resetLink.pathname, "/user/reset-password");
+    assert.match(sentEmails[3]!.htmlContent, /Cambiar mi contraseña/);
+    assert.match(sentEmails[3]!.htmlContent, /vence en 1 hora/i);
+    assert.doesNotMatch(
+      sentEmails[3]!.htmlContent.replace(/href="[^"]+"/g, ""),
+      /https?:\/\/|preview-123/,
+    );
+    assert.equal(
+      sentEmails[3]!.htmlContent
+        .replace(/<[^>]*>/g, " ")
+        .includes(resetLink.searchParams.get("token")!),
+      false,
+      "the reset token appears only in the button destination",
+    );
     await assert.rejects(
       caller.user.resetPassword({
         token: "invalid-token",
@@ -488,13 +533,53 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(orders.length, 2);
   } finally {
     globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries(previousEmailEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   }
+});
+
+test("checkout only accepts the payment method that is actually available", () => {
+  const order = {
+    items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+    address: "Calle 10 # 20-30",
+    municipality: "Bogotá",
+    department: "Cundinamarca",
+  };
+
+  assert.equal(
+    createOrderInputSchema.safeParse({
+      ...order,
+      paymentMethod: "cash",
+    }).success,
+    true,
+  );
+  assert.equal(
+    createOrderInputSchema.safeParse({
+      ...order,
+      paymentMethod: "credit-card",
+    }).success,
+    false,
+  );
 });
 
 test("a Brevo failure does not leave a usable account verification link", async () => {
   const { database, users, verificationTokens } = createMemoryDatabase();
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response(null, { status: 503 });
+  const originalConsoleError = console.error;
+  const loggedErrors: unknown[][] = [];
+  let emailHtml = "";
+  let emailToken = "";
+  globalThis.fetch = async (_input, init) => {
+    emailHtml = (JSON.parse(String(init?.body)) as { htmlContent: string })
+      .htmlContent;
+    const href = emailHtml.match(/href="([^"]+)"/)?.[1];
+    assert.ok(href);
+    emailToken = new URL(href).searchParams.get("token") ?? "";
+    throw new Error(`Mock provider error for ${emailToken}`);
+  };
+  console.error = (...args: unknown[]) => loggedErrors.push(args);
 
   try {
     const caller = createCaller(createContext(database));
@@ -505,6 +590,18 @@ test("a Brevo failure does not leave a usable account verification link", async 
     });
 
     assert.match(result.message, /recibirás un mensaje/i);
+    assert.ok(emailToken);
+    assert.equal(result.message.includes(emailToken), false);
+    assert.equal(
+      emailHtml.replace(/<[^>]*>/g, " ").includes(emailToken),
+      false,
+      "the token is not displayed in the email body",
+    );
+    assert.equal(
+      JSON.stringify(loggedErrors).includes(emailToken),
+      false,
+      "provider errors do not expose the token in logs",
+    );
     assert.equal(users.get(email)?.emailVerified, null);
     assert.equal(
       verificationTokens.some((item) => item.identifier.endsWith(email)),
@@ -513,6 +610,7 @@ test("a Brevo failure does not leave a usable account verification link", async 
     );
   } finally {
     globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
   }
 });
 

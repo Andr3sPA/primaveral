@@ -10,12 +10,12 @@ export default async function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+    <main className="botanical-page mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="mb-2 text-3xl font-medium">Mi perfil</h1>
       <p className="text-muted-foreground mb-6">
         Actualiza tus datos y guarda una dirección para próximas compras.
       </p>
-      <Card className="border-stone-200 shadow-none">
+      <Card className="rounded-2xl border-stone-200 shadow-sm">
         <CardContent className="p-6 sm:p-8">
           <ProfileForm />
         </CardContent>

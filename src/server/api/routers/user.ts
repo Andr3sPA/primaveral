@@ -65,28 +65,27 @@ async function sendAccountTokenEmail(
   });
 
   const trimmedName = name?.trim();
-  const displayName = escapeHtml(trimmedName ?? "Hola");
+  const greeting = trimmedName ? `Hola, ${escapeHtml(trimmedName)}` : "Hola";
   const isVerification = purpose === "verification";
   const subject = isVerification
-    ? "Confirma tu correo | Primaveral Bordados"
-    : "Cambia tu contraseña | Primaveral Bordados";
+    ? "Confirma tu correo | Primaveral"
+    : "Cambia tu contraseña | Primaveral";
   const action = isVerification
     ? "Confirmar mi correo"
     : "Cambiar mi contraseña";
   const expiry = isVerification ? "24 horas" : "1 hora";
   const requestDescription = isVerification
-    ? "confirmar tu cuenta de Primaveral Bordados"
-    : "cambiar tu contraseña";
-  const actionHost = new URL(actionUrl).host;
+    ? "Confirma tu correo para activar tu cuenta de Primaveral."
+    : "Usa este botón para cambiar tu contraseña de Primaveral.";
   const safeActionUrl = escapeHtml(actionUrl);
-  const textContent = `${trimmedName ?? "Hola"}, abre este enlace para ${requestDescription}: ${actionUrl} (dominio: ${actionHost}). El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.`;
+  const textContent = `${trimmedName ? `Hola, ${trimmedName}` : "Hola"}\n\n${requestDescription}\n\n${action}: ${actionUrl}\n\nEste enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.`;
 
   try {
     await sendBrevoEmail({
       to: email,
       subject,
       textContent,
-      htmlContent: `<p>${displayName},</p><p>Abre el enlace para ${requestDescription}.</p><p><a href="${safeActionUrl}">${action}</a></p><p>Destino: ${escapeHtml(actionHost)}</p><p>Enlace directo: <a href="${safeActionUrl}">${safeActionUrl}</a></p><p>El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.</p>`,
+      htmlContent: `<div lang="es" style="margin:0;background-color:#fffaf6;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#35283b;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border:1px solid #f0e5e9;border-radius:12px;"><tr><td style="padding:20px 24px;text-align:center;border-bottom:3px solid #e8bd62;"><span aria-hidden="true" style="color:#c85c87;font-size:20px;">✿</span><span style="padding-left:8px;color:#56336b;font-size:20px;font-weight:bold;">Primaveral</span></td></tr><tr><td style="padding:28px 24px 32px;font-size:18px;line-height:1.6;"><p style="margin:0 0 16px;">${greeting}</p><p style="margin:0 0 24px;">${requestDescription}</p><p style="margin:0 0 24px;text-align:center;"><a href="${safeActionUrl}" style="display:inline-block;min-height:24px;padding:16px 24px;border-radius:8px;background-color:#56336b;color:#ffffff;font-size:18px;font-weight:bold;line-height:24px;text-align:center;text-decoration:none;">${action}</a></p><p style="margin:0 0 16px;">Este enlace vence en ${expiry}.</p><p style="margin:0;color:#594f5d;font-size:16px;">Si no solicitaste esto, ignora este correo. Si necesitas ayuda, responde a este mensaje.</p></td></tr></table></div>`,
     });
   } catch (error) {
     await db.verificationToken.deleteMany({
