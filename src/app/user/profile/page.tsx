@@ -1,4 +1,5 @@
 import { ProfileForm } from "@/components/ProfileForm";
+import { MyOrders } from "@/components/MyOrders";
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
@@ -10,16 +11,35 @@ export default async function ProfilePage() {
   }
 
   return (
-    <main className="botanical-page mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="mb-2 text-3xl font-medium">Mi perfil</h1>
-      <p className="text-muted-foreground mb-6">
-        Actualiza tus datos y guarda una dirección para próximas compras.
-      </p>
-      <Card className="rounded-2xl border-stone-200 shadow-sm">
-        <CardContent className="p-6 sm:p-8">
-          <ProfileForm />
-        </CardContent>
-      </Card>
+    <main className="botanical-page mx-auto w-full max-w-4xl space-y-10 px-4 py-8 sm:px-6 sm:py-12">
+      <header className="space-y-3">
+        <h1 className="text-3xl font-medium">Mi perfil</h1>
+        <p className="text-muted-foreground">
+          Administra tus datos y revisa el estado de tus compras.
+        </p>
+        <a
+          href="#profile-details-heading"
+          className="inline-flex min-h-11 items-center font-medium text-violet-900 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+        >
+          Editar mis datos
+        </a>
+      </header>
+      <MyOrders />
+      <section aria-labelledby="profile-details-heading" className="space-y-4">
+        <div>
+          <h2 id="profile-details-heading" className="text-2xl font-medium">
+            Mis datos
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Actualiza tu información y dirección para próximas compras.
+          </p>
+        </div>
+        <Card className="rounded-2xl border-stone-200 shadow-sm">
+          <CardContent className="p-6 sm:p-8">
+            <ProfileForm />
+          </CardContent>
+        </Card>
+      </section>
     </main>
   );
 }

@@ -24,6 +24,13 @@ columnas y datos deben compararse antes de registrar migraciones como aplicadas.
 migraciones automáticamente. `npm run db:migrate` queda como operación manual
 explícita, nunca como paso de compilación.
 
+El perfil necesita las columnas `User.municipality` y `User.department` de la
+migración `20261107180000_reconcile_profile_address_columns`. Si el perfil
+registra un error Prisma `P2022`, el servidor puede mostrar y guardar los datos
+básicos mientras esas columnas falten, pero municipio y departamento no estarán
+disponibles hasta aplicar las migraciones pendientes siguiendo este
+procedimiento.
+
 ## Procedimiento para una base Neon existente
 
 Realiza estos pasos desde una máquina controlada, con acceso solo a la base

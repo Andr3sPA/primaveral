@@ -88,7 +88,22 @@ function createMemoryDatabase(
           ) ?? null
         );
       },
-      findUniqueOrThrow: async ({ where }: { where: { id: string } }) => {
+      findUniqueOrThrow: async ({
+        where,
+        select,
+      }: {
+        where: { id: string };
+        select?: Partial<Record<keyof TestUser, boolean>>;
+      }) => {
+        if (
+          !userAddressColumnsPresent &&
+          (!select || "municipality" in select || "department" in select)
+        ) {
+          throw Object.assign(
+            new Error('The column "User.municipality" does not exist.'),
+            { code: "P2022" },
+          );
+        }
         const user = [...users.values()].find(
           (candidate) => candidate.id === where.id,
         );
@@ -145,15 +160,44 @@ function createMemoryDatabase(
       update: async ({
         where,
         data,
+        select,
       }: {
         where: { id: string };
         data: Partial<TestUser>;
+        select?: Partial<Record<keyof TestUser, boolean>>;
       }) => {
+        if (
+          !userAddressColumnsPresent &&
+          (!select || "municipality" in select || "department" in select)
+        ) {
+          throw Object.assign(
+            new Error('The column "User.municipality" does not exist.'),
+            { code: "P2022" },
+          );
+        }
         const user = [...users.values()].find(
           (candidate) => candidate.id === where.id,
         );
         if (!user) throw new Error("User not found");
+        if (
+          !userAddressColumnsPresent &&
+          ("municipality" in data || "department" in data)
+        ) {
+          throw Object.assign(
+            new Error('The column "User.municipality" does not exist.'),
+            { code: "P2022" },
+          );
+        }
         Object.assign(user, data);
+        if (select && !("municipality" in select)) {
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address,
+          };
+        }
         return user;
       },
     },
@@ -220,10 +264,31 @@ function createMemoryDatabase(
     },
     order: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
-        const order = { id: `order-${orders.length + 1}`, ...data };
+        const orderItems = data.orderItems as {
+          create: Array<{
+            menuItemId: string;
+            quantity: number;
+            subtotal: number;
+          }>;
+        };
+        const order = {
+          id: `order-${orders.length + 1}`,
+          status: "PENDING",
+          createdAt: new Date(),
+          ...data,
+          orderItems: orderItems.create.map((item) => ({
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+            menuItem: {
+              name: products.get(item.menuItemId)?.name ?? "Producto",
+            },
+          })),
+        };
         orders.push(order);
         return order;
       },
+      findMany: async ({ where }: { where: { userId: string } }) =>
+        orders.filter((order) => order.userId === where.userId),
     },
     $transaction: async <T>(callback: (transaction: unknown) => Promise<T>) =>
       callback(database),
@@ -531,6 +596,20 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(registeredOrder.userId, user.id);
     assert.equal(user.municipality, "Bogotá");
     assert.equal(orders.length, 2);
+
+    orders.push({
+      id: "another-users-order",
+      userId: "another-user",
+      status: "DELIVERED",
+      createdAt: new Date(),
+      total: 99,
+      orderItems: [],
+    });
+    const myOrders = await accountCaller.user.getMyOrders();
+    assert.equal(myOrders.length, 1);
+    assert.equal(myOrders[0]?.id, registeredOrder.id);
+    assert.equal(myOrders[0]?.status, "PENDING");
+    assert.equal(myOrders[0]?.orderItems[0]?.menuItem.name, "Blusa");
   } finally {
     globalThis.fetch = originalFetch;
     for (const [key, value] of Object.entries(previousEmailEnv)) {
@@ -657,6 +736,23 @@ test("registration succeeds when legacy User address columns are absent", async 
     assert.equal(users.get(email)?.emailVerified, null);
     assert.equal(sentEmails.length, 1);
     assert.equal(sentEmails[0]?.to[0]?.email, email);
+
+    const accountCaller = createCaller(
+      createContext(database, users.get(email)!),
+    );
+    const profile = await accountCaller.user.getProfile();
+    assert.equal(profile.addressFieldsAvailable, false);
+    assert.equal(profile.municipality, null);
+    const updatedProfile = await accountCaller.user.updateProfile({
+      name: "Cliente actualizado",
+      phone: "3001234567",
+      address: "Calle 10 # 20-30",
+      municipality: "Bogotá",
+      department: "Cundinamarca",
+    });
+    assert.equal(updatedProfile.addressFieldsAvailable, false);
+    assert.equal(updatedProfile.name, "Cliente actualizado");
+    assert.equal(users.get(email)?.address, "Calle 10 # 20-30");
   } finally {
     globalThis.fetch = originalFetch;
   }

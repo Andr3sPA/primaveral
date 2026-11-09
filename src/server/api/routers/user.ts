@@ -30,6 +30,17 @@ const passwordSchema = z
   .regex(/[0-9]/, { message: "Incluye al menos un número." })
   .regex(/[^A-Za-z0-9]/, { message: "Incluye al menos un símbolo." });
 
+function isMissingDatabaseColumn(error: unknown) {
+  return getSafeErrorMetadata(error).errorCode === "P2022";
+}
+
+function logMissingProfileColumns(error: unknown) {
+  console.warn(
+    "La base de datos necesita la migración de columnas del perfil.",
+    getSafeErrorMetadata(error),
+  );
+}
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -160,20 +171,52 @@ export const userRouter = createTRPCRouter({
         role: userFromDb.role,
       };
     }),
-  getProfile: protectedProcedure.query(({ ctx }) =>
-    ctx.db.user.findUniqueOrThrow({
-      where: { id: ctx.session.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        address: true,
-        municipality: true,
-        department: true,
-      },
-    }),
-  ),
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      return {
+        ...(await ctx.db.user.findUniqueOrThrow({
+          where: { id: ctx.session.user.id },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            municipality: true,
+            department: true,
+          },
+        })),
+        addressFieldsAvailable: true,
+      };
+    } catch (error) {
+      if (!isMissingDatabaseColumn(error)) throw error;
+
+      logMissingProfileColumns(error);
+      const profile = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+        },
+      });
+      if (!profile) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No encontramos tu perfil.",
+        });
+      }
+
+      return {
+        ...profile,
+        municipality: null,
+        department: null,
+        addressFieldsAvailable: false,
+      };
+    }
+  }),
   updateProfile: protectedProcedure
     .input(
       z.object({
@@ -184,27 +227,78 @@ export const userRouter = createTRPCRouter({
         department: z.string().trim().max(100).optional(),
       }),
     )
-    .mutation(({ ctx, input }) =>
-      ctx.db.user.update({
-        where: { id: ctx.session.user.id },
-        data: {
-          name: input.name?.trim() ? input.name : null,
-          phone: input.phone?.trim() ? input.phone : null,
-          address: input.address?.trim() ? input.address : null,
-          municipality: input.municipality?.trim() ? input.municipality : null,
-          department: input.department?.trim() ? input.department : null,
+    .mutation(async ({ ctx, input }) => {
+      const where = { id: ctx.session.user.id };
+      const data = {
+        name: input.name?.trim() ? input.name : null,
+        phone: input.phone?.trim() ? input.phone : null,
+        address: input.address?.trim() ? input.address : null,
+        municipality: input.municipality?.trim() ? input.municipality : null,
+        department: input.department?.trim() ? input.department : null,
+      };
+
+      try {
+        return {
+          ...(await ctx.db.user.update({
+            where,
+            data,
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              address: true,
+              municipality: true,
+              department: true,
+            },
+          })),
+          addressFieldsAvailable: true,
+        };
+      } catch (error) {
+        if (!isMissingDatabaseColumn(error)) throw error;
+
+        logMissingProfileColumns(error);
+        const profile = await ctx.db.user.update({
+          where,
+          data: {
+            name: data.name,
+            phone: data.phone,
+            address: data.address,
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+          },
+        });
+        return {
+          ...profile,
+          municipality: null,
+          department: null,
+          addressFieldsAvailable: false,
+        };
+      }
+    }),
+  getMyOrders: protectedProcedure.query(({ ctx }) =>
+    ctx.db.order.findMany({
+      where: { userId: ctx.session.user.id },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        total: true,
+        orderItems: {
+          select: {
+            quantity: true,
+            menuItem: { select: { name: true } },
+          },
         },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          address: true,
-          municipality: true,
-          department: true,
-        },
-      }),
-    ),
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ),
   getUsers: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.user.findMany({
       select: {
