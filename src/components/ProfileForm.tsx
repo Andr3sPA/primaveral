@@ -55,7 +55,7 @@ export function ProfileForm() {
   if (error || !profile) {
     return (
       <p role="alert" className="text-sm text-red-600">
-        {error?.message ?? "No fue posible cargar el perfil."}
+        No fue posible cargar tus datos de perfil. Inténtalo de nuevo más tarde.
       </p>
     );
   }
@@ -74,6 +74,16 @@ export function ProfileForm() {
         });
       }}
     >
+      {profile.addressFieldsAvailable === false && (
+        <p
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+        >
+          La base de datos necesita una actualización para guardar el municipio
+          y el departamento. Por ahora puedes consultar y actualizar los demás
+          datos de tu perfil.
+        </p>
+      )}
       <div>
         <label
           htmlFor="profile-email"
@@ -179,7 +189,9 @@ export function ProfileForm() {
       )}
       {updateProfile.data && (
         <p role="status" className="text-sm text-emerald-700">
-          Perfil actualizado.
+          {updateProfile.data.addressFieldsAvailable === false
+            ? "Guardamos tus datos básicos. El municipio y el departamento requieren una actualización de la base de datos."
+            : "Perfil actualizado."}
         </p>
       )}
       <Button type="submit" disabled={updateProfile.isPending}>
