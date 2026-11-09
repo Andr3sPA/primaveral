@@ -173,3 +173,24 @@ test("account and checkout pages use the shared botanical theme", async () => {
   assert.match(styles, /oklch\(0\.82 0\.09 355/);
   assert.match(styles, /oklch\(0\.82 0\.07 145/);
 });
+
+test("the profile emphasizes useful actions and real order product details", async () => {
+  const [profilePage, orders, status] = await Promise.all([
+    readSource("src/app/user/profile/page.tsx"),
+    readSource("src/components/MyOrders.tsx"),
+    readSource("src/components/OrdersTable/OrderStatusBadge.tsx"),
+  ]);
+
+  assert.match(profilePage, /Editar mis datos/);
+  assert.match(profilePage, /size="lg"/);
+  assert.match(orders, /item\.menuItem\.image/);
+  assert.match(orders, /item\.menuItem\.name/);
+  assert.match(orders, /item\.subtotal/);
+  assert.match(orders, /tabular-nums/);
+  assert.match(orders, /role="status"/);
+  assert.match(orders, /Explorar la colección/);
+  assert.match(orders, /Reintentar/);
+  assert.doesNotMatch(orders, /italic|animate-pulse/);
+  assert.match(orders, /font-mono text-sm font-normal tabular-nums/);
+  assert.doesNotMatch(status, /lucide-react|<Icon/);
+});

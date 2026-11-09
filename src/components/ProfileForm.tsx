@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/trpc/react";
 
 type ProfileFields = {
@@ -49,12 +50,24 @@ export function ProfileForm() {
   };
 
   if (isLoading) {
-    return <p className="text-muted-foreground">Cargando tu perfil...</p>;
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        className="space-y-4"
+      >
+        <p className="text-muted-foreground">Cargando tus datos...</p>
+        <Skeleton className="h-11 w-full" aria-hidden="true" />
+        <Skeleton className="h-11 w-full" aria-hidden="true" />
+        <Skeleton className="h-11 w-2/3" aria-hidden="true" />
+      </div>
+    );
   }
 
   if (error || !profile) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-red-800">
         No fue posible cargar tus datos de perfil. Inténtalo de nuevo más tarde.
       </p>
     );
@@ -77,6 +90,7 @@ export function ProfileForm() {
       {profile.addressFieldsAvailable === false && (
         <p
           role="status"
+          aria-live="polite"
           className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
         >
           La base de datos necesita una actualización para guardar el municipio
@@ -183,18 +197,24 @@ export function ProfileForm() {
         </div>
       </div>
       {updateProfile.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-red-800">
           {updateProfile.error.message}
         </p>
       )}
       {updateProfile.data && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" aria-live="polite" className="text-primary text-sm">
           {updateProfile.data.addressFieldsAvailable === false
             ? "Guardamos tus datos básicos. El municipio y el departamento requieren una actualización de la base de datos."
             : "Perfil actualizado."}
         </p>
       )}
-      <Button type="submit" disabled={updateProfile.isPending}>
+      <Button
+        type="submit"
+        size="lg"
+        className="min-h-11"
+        disabled={updateProfile.isPending}
+        aria-busy={updateProfile.isPending}
+      >
         {updateProfile.isPending ? "Guardando..." : "Guardar cambios"}
       </Button>
     </form>

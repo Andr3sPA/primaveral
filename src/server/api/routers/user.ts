@@ -291,8 +291,12 @@ export const userRouter = createTRPCRouter({
         total: true,
         orderItems: {
           select: {
+            id: true,
             quantity: true,
-            menuItem: { select: { name: true } },
+            subtotal: true,
+            menuItem: {
+              select: { id: true, name: true, image: true, currency: true },
+            },
           },
         },
       },
