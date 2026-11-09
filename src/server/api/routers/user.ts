@@ -113,7 +113,7 @@ async function sendAccountTokenEmail(
 }
 
 const emailInput = z.object({
-  email: z.string().trim().email().max(254),
+  email: z.string().trim().toLowerCase().email().max(254),
 });
 
 async function isAccountEmailOnCooldown(
@@ -140,7 +140,7 @@ export const userRouter = createTRPCRouter({
   authenticateUser: publicProcedure
     .input(
       z.object({
-        email: z.string().trim().email().max(254),
+        email: z.string().trim().toLowerCase().email().max(254),
         password: z.string().min(1).max(128),
       }),
     )
@@ -353,12 +353,12 @@ export const userRouter = createTRPCRouter({
       z.object({
         name: z.string().trim().max(100).optional(),
         phone: z.string().trim().max(30).optional(),
-        email: z.string().trim().email().max(254),
+        email: z.string().trim().toLowerCase().email().max(254),
         password: passwordSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const email = input.email.toLowerCase();
+      const email = input.email;
       const registrationUserSelect = {
         id: true,
         email: true,
@@ -417,7 +417,7 @@ export const userRouter = createTRPCRouter({
   requestEmailVerification: publicProcedure
     .input(emailInput)
     .mutation(async ({ ctx, input }) => {
-      const email = input.email.toLowerCase();
+      const email = input.email;
       const user = await ctx.db.user.findUnique({
         where: { email },
         select: { name: true, emailVerified: true },
@@ -484,6 +484,22 @@ export const userRouter = createTRPCRouter({
               "El enlace para confirmar tu correo no funciona o ya venció.",
           });
         }
+
+        const verifiedUser = await tx.user.findUnique({
+          where: { email },
+          select: { id: true },
+        });
+        if (!verifiedUser) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "El enlace para confirmar tu correo no funciona o ya venció.",
+          });
+        }
+        await tx.order.updateMany({
+          where: { userId: null, guestEmail: email },
+          data: { userId: verifiedUser.id },
+        });
       });
 
       return {
@@ -493,7 +509,7 @@ export const userRouter = createTRPCRouter({
   requestPasswordReset: publicProcedure
     .input(emailInput)
     .mutation(async ({ ctx, input }) => {
-      const email = input.email.toLowerCase();
+      const email = input.email;
       const user = await ctx.db.user.findUnique({
         where: { email },
         select: { name: true, emailVerified: true },

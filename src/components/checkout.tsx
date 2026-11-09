@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, LockKeyhole, Minus, Plus, WalletCards } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -166,6 +167,20 @@ export function Checkout() {
           Te contactaremos para confirmar los detalles y el pago. Gracias por
           elegir piezas hechas con calma.
         </p>
+        {createOrder.data?.trackingUrl && (
+          <div className="mt-6 space-y-3 rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4 text-left">
+            <p className="font-medium text-[#35203f]">
+              Guarda este enlace para consultar el estado de tu pedido:
+            </p>
+            <Button asChild size="lg" className="min-h-12 w-full">
+              <Link href={createOrder.data.trackingUrl}>Seguir mi pedido</Link>
+            </Button>
+            <p className="text-sm leading-6 text-[#514060]">
+              También te enviamos el enlace por correo. No lo compartas: permite
+              ver el estado y los productos de tu compra.
+            </p>
+          </div>
+        )}
         <Button className="mt-8 rounded-full" onClick={() => router.push("/")}>
           Volver a la tienda
         </Button>
