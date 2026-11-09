@@ -7,8 +7,12 @@ import {
 } from "@/server/api/trpc";
 import { FulfillmentType } from "@prisma/client";
 
-const productInput = z.object({
-  name: z.string().trim().min(2, "El nombre debe tener al menos 2 caracteres"),
+export const productInputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .transform((name) => name.normalize("NFC")),
   description: z.string().trim().max(500).optional(),
   currency: z.string().length(1).default("$"),
   price: z.number().finite().positive("El precio debe ser mayor a cero"),
@@ -24,11 +28,11 @@ const productInput = z.object({
 
 export const menuRouter = createTRPCRouter({
   registerMenuItem: adminProcedure
-    .input(productInput)
+    .input(productInputSchema)
     .mutation(({ ctx, input }) => ctx.db.menuItem.create({ data: input })),
 
   updateMenuItem: adminProcedure
-    .input(productInput.extend({ id: z.string().cuid() }))
+    .input(productInputSchema.extend({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       const existing = await ctx.db.menuItem.findUnique({ where: { id } });

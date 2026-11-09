@@ -78,6 +78,7 @@ test("the catalog only offers category filters present in the real inventory", a
   const source = await readSource("src/components/main/menu.tsx");
 
   assert.match(source, /products\.map\(\(item\) => item\.category\)/);
+  assert.match(source, /\{item\.name\}/);
   assert.doesNotMatch(source, /const categories = \["Todos", "Bordados"/);
 });
 
@@ -92,6 +93,15 @@ test("the global navigation makes the cart count and mobile menu accessible", as
   assert.match(source, /min-h-11 min-w-11/);
   assert.match(sheet, /min-h-11 min-w-11/);
   assert.match(sheet, /<span className="sr-only">Cerrar<\/span>/);
+  assert.match(source, /w-\[min\(22rem,88vw\)\][^"]*p-0/);
+  assert.match(source, /SheetClose asChild/);
+  assert.match(source, /className="flex flex-col gap-1 px-4 py-4"/);
+  assert.match(source, /min-h-12[^"]*px-4/);
+  assert.match(source, /font-display text-left text-2xl/);
+  assert.match(source, /<SheetDescription/);
+  assert.match(source, /text-base font-medium/);
+  assert.match(source, /min-h-12 w-full justify-center text-base/);
+  assert.doesNotMatch(source, /mt-8 flex flex-col gap-5/);
 });
 
 test("the homepage uses the Primaveral brand, readable controls, and sufficient contrast", async () => {
