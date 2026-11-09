@@ -15,6 +15,7 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 ## Funcionalidades
 
 - Catálogo público con búsqueda, categorías, destacados y detalle de producto.
+- Identidad visual floral con navegación adaptable, catálogo accesible y enlaces de contacto.
 - Carrito persistente en el navegador con cantidades y control de stock al crear pedidos.
 - Checkout preparado para conectar un proveedor de pago; actualmente registra el pedido como pendiente y no almacena datos de tarjeta.
 - Registro e inicio de sesión con correo y contraseña, verificación de cuenta y recuperación de contraseña mediante Brevo.

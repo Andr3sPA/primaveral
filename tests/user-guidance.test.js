@@ -74,26 +74,71 @@ test("catalog search treats accented and unaccented Spanish words alike", () => 
   assert.equal(normalizeSearchText("niño"), normalizeSearchText("NINO"));
 });
 
-test("the homepage uses clear copy, readable controls, and sufficient hero contrast", async () => {
+test("the catalog only offers category filters present in the real inventory", async () => {
+  const source = await readSource("src/components/main/menu.tsx");
+
+  assert.match(source, /products\.map\(\(item\) => item\.category\)/);
+  assert.doesNotMatch(source, /const categories = \["Todos", "Bordados"/);
+});
+
+test("the global navigation makes the cart count and mobile menu accessible", async () => {
+  const [source, sheet] = await Promise.all([
+    readSource("src/components/navbar-client.tsx"),
+    readSource("src/components/ui/sheet.tsx"),
+  ]);
+
+  assert.match(source, /Ver carrito, \$\{getItemCount\(\)\}/);
+  assert.match(source, /aria-label="Abrir menú"/);
+  assert.match(source, /min-h-11 min-w-11/);
+  assert.match(sheet, /min-h-11 min-w-11/);
+  assert.match(sheet, /<span className="sr-only">Cerrar<\/span>/);
+});
+
+test("the homepage uses the Primaveral brand, readable controls, and sufficient contrast", async () => {
   const [source, layout, page] = await Promise.all([
     readSource("src/components/main/menu.tsx"),
     readSource("src/app/layout.tsx"),
     readSource("src/app/page.tsx"),
   ]);
 
-  assert.match(source, /Prendas disponibles/);
+  assert.match(source, /Bordados y accesorios/);
+  assert.match(source, /Arte que se viste, tradición que perdura\./);
+  assert.match(
+    source,
+    /Prendas de vestir exclusivas bordadas a mano de Cartago en Medellín\./,
+  );
+  assert.match(source, /src="\/primaveral-floral\.jpg"/);
   assert.match(source, /No encontramos prendas con esa búsqueda/);
   assert.doesNotMatch(source, /Nueva temporada|pieza 01 \/ 04/);
   assert.match(source, /min-h-11[^"]*text-base/);
-  assert.match(source, /bg-\[#8e5643\]/);
-  assert.match(source, /text-\[#fff7ec\]/);
+  assert.match(source, /bg-\[#48235c\]/);
+  assert.match(source, /text-white/);
   assert.match(source, /búsqueda/);
   assert.match(layout, /lang="es"/);
   assert.match(layout, /subsets: \["latin"\]/);
   assert.match(page, /<Menu\s*\/>/);
   assert.doesNotMatch(page, /<main/);
 
-  assert.ok(contrastRatio("fff7ec", "8e5643") >= 4.5);
+  assert.ok(contrastRatio("fffdf8", "48235c") >= 4.5);
+});
+
+test("the shared footer provides the supplied business contacts and social links", async () => {
+  const [footer, layout] = await Promise.all([
+    readSource("src/components/site-footer.tsx"),
+    readSource("src/app/layout.tsx"),
+  ]);
+
+  assert.match(footer, /tel:\+573146589953/);
+  assert.match(footer, /mailto:primaveralbordados@gmail\.com/);
+  assert.match(
+    footer,
+    /https:\/\/www\.facebook\.com\/Bordadosddecartagoprimaveral/,
+  );
+  assert.match(
+    footer,
+    /https:\/\/www\.instagram\.com\/bordadosdecartagoenmedellin\//,
+  );
+  assert.match(layout, /<SiteFooter\s*\/>/);
 });
 
 test("expired account links provide a clear next step", async () => {

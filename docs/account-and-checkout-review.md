@@ -21,8 +21,8 @@
 
 ## Interfaz y correos
 
-- Las pantallas de registro, inicio de sesión, verificación, recuperación, perfil y checkout comparten un fondo floral sutil con tonos cálidos y salvia. Los controles conservan etiquetas visibles, estados de error y foco accesible.
-- Los correos de verificación y recuperación usan un único botón de acción, muestran el dominio y mantienen el enlace absoluto en texto plano, junto con vencimiento y una nota para solicitudes no reconocidas.
+- La tienda, navegación, catálogo, páginas de cuenta y checkout usan una identidad floral morada, rosa y dorada, con botones y controles de alto contraste, objetivos táctiles grandes, navegación de carrito accesible y una preferencia de movimiento reducido respetada.
+- Los correos de verificación y recuperación usan un único botón de acción destacado, un mensaje conciso con saludo y vencimiento, y conservan el enlace absoluto en texto plano para lectores sin formato HTML.
 
 ## Operación local
 

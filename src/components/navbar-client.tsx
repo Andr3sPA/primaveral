@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, ShoppingBag } from "lucide-react";
+import { Flower2, Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
 import {
   Sheet,
   SheetContent,
@@ -16,37 +17,40 @@ import {
 export function NavbarClient() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { getItemCount } = useCart();
   const isAdmin = session?.user?.role === "ADMIN";
   const links = [
-    { href: "/", label: "Colección" },
-    { href: "/#coleccion", label: "Categorías" },
+    { href: "/", label: "Inicio" },
+    { href: "/#coleccion", label: "Catálogo" },
+    { href: "/#contacto", label: "Contacto" },
     ...(isAdmin ? [{ href: "/admin", label: "Administración" }] : []),
   ];
 
   return (
-    <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-[#faf9f7]/90 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-7xl min-w-0 items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
-        <Link
-          href="/"
-          className="flex min-h-11 min-w-0 items-center gap-2 sm:gap-3"
-        >
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-stone-900 text-sm font-semibold text-white">
-            PB
+    <header className="sticky top-0 z-30 border-b border-[#e7dbea] bg-[#fffdf8]/95 backdrop-blur">
+      <div className="mx-auto flex h-[4.5rem] max-w-7xl min-w-0 items-center justify-between gap-2 px-4 sm:h-20 sm:gap-3 sm:px-6 lg:px-10">
+        <Link href="/" className="flex min-h-11 min-w-0 items-center gap-2">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f7e7a9] text-[#48235c]">
+            <Flower2 className="h-6 w-6" aria-hidden="true" />
           </span>
-          <span className="font-display text-primary truncate text-xl font-semibold tracking-tight sm:text-2xl">
-            Primaveral{" "}
-            <span className="text-muted-foreground font-normal">Bordados</span>
+          <span className="min-w-0">
+            <span className="font-display block truncate text-xl leading-tight font-semibold tracking-tight text-[#48235c] sm:text-2xl">
+              Primaveral
+            </span>
+            <span className="hidden text-xs font-medium text-[#514060] sm:block">
+              Bordados de Cartago
+            </span>
           </span>
         </Link>
         <nav
           aria-label="Navegación principal"
-          className="hidden items-center gap-7 md:flex"
+          className="hidden items-center gap-5 lg:flex"
         >
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex min-h-11 items-center text-base transition hover:text-stone-900 ${pathname === link.href ? "font-medium text-stone-900" : "text-stone-700"}`}
+              className={`flex min-h-11 items-center text-base transition hover:text-[#48235c] ${pathname === link.href ? "font-semibold text-[#48235c]" : "text-[#514060]"}`}
             >
               {link.label}
             </Link>
@@ -55,11 +59,23 @@ export function NavbarClient() {
         <div className="flex items-center gap-2">
           <Link
             href="/checkout"
-            aria-label="Ver carrito"
-            className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-stone-700 transition hover:bg-stone-100 hover:text-stone-900"
+            aria-label={
+              getItemCount()
+                ? `Ver carrito, ${getItemCount()} ${getItemCount() === 1 ? "producto" : "productos"}`
+                : "Ver carrito"
+            }
+            className="relative flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-2 text-[#48235c] transition hover:bg-[#f5eaf4] sm:px-3"
           >
             <ShoppingBag className="h-5 w-5" aria-hidden="true" />
-            <span>Carrito</span>
+            <span className="hidden text-base sm:inline">Carrito</span>
+            {getItemCount() > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute top-0 right-0 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#df8eaa] px-1 text-xs font-bold text-[#35203f]"
+              >
+                {getItemCount()}
+              </span>
+            )}
           </Link>
           {session ? (
             <>
@@ -67,7 +83,7 @@ export function NavbarClient() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden min-h-11 px-3 text-base sm:inline-flex"
+                className="hidden min-h-11 px-3 text-base lg:inline-flex"
               >
                 <Link href="/user/profile">Mi perfil</Link>
               </Button>
@@ -75,7 +91,7 @@ export function NavbarClient() {
                 variant="ghost"
                 size="sm"
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="hidden min-h-11 px-3 text-base sm:inline-flex"
+                className="hidden min-h-11 px-3 text-base lg:inline-flex"
               >
                 Cerrar sesión
               </Button>
@@ -85,7 +101,7 @@ export function NavbarClient() {
               asChild
               variant="ghost"
               size="sm"
-              className="hidden min-h-11 px-3 text-base sm:inline-flex"
+              className="hidden min-h-11 px-3 text-base lg:inline-flex"
             >
               <Link href="/user/signin">Iniciar sesión</Link>
             </Button>
@@ -95,7 +111,7 @@ export function NavbarClient() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="min-h-11 min-w-11 md:hidden"
+                className="min-h-11 min-w-11 lg:hidden"
                 aria-label="Abrir menú"
               >
                 <Menu className="h-5 w-5" aria-hidden="true" />
@@ -113,7 +129,7 @@ export function NavbarClient() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="min-h-11 py-2 text-left text-lg text-stone-700"
+                    className="flex min-h-11 items-center py-2 text-left text-lg text-[#48235c]"
                   >
                     {link.label}
                   </Link>
@@ -122,12 +138,12 @@ export function NavbarClient() {
                   <>
                     <Link
                       href="/user/profile"
-                      className="min-h-11 py-2 text-left text-lg text-stone-700"
+                      className="flex min-h-11 items-center py-2 text-left text-lg text-[#48235c]"
                     >
                       Mi perfil
                     </Link>
                     <button
-                      className="min-h-11 py-2 text-left text-lg text-stone-700"
+                      className="min-h-11 py-2 text-left text-lg text-[#48235c]"
                       onClick={() => signOut({ callbackUrl: "/" })}
                     >
                       Cerrar sesión
@@ -136,7 +152,7 @@ export function NavbarClient() {
                 ) : (
                   <Link
                     href="/user/signin"
-                    className="min-h-11 py-2 text-left text-lg text-stone-700"
+                    className="flex min-h-11 items-center py-2 text-left text-lg text-[#48235c]"
                   >
                     Iniciar sesión
                   </Link>

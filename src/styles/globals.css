@@ -50,24 +50,24 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.975 0.012 82);
-  --foreground: oklch(0.24 0.025 35);
-  --card: oklch(0.99 0.006 82);
-  --card-foreground: oklch(0.24 0.025 35);
-  --popover: oklch(0.99 0.006 82);
-  --popover-foreground: oklch(0.24 0.025 35);
-  --primary: oklch(0.38 0.075 30);
-  --primary-foreground: oklch(0.98 0.01 82);
-  --secondary: oklch(0.91 0.045 82);
-  --secondary-foreground: oklch(0.28 0.04 35);
-  --muted: oklch(0.94 0.025 82);
-  --muted-foreground: oklch(0.51 0.04 35);
-  --accent: oklch(0.88 0.075 196);
-  --accent-foreground: oklch(0.24 0.04 200);
+  --background: oklch(0.985 0.01 88);
+  --foreground: oklch(0.24 0.035 300);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.035 300);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.035 300);
+  --primary: oklch(0.39 0.11 305);
+  --primary-foreground: oklch(0.99 0.005 88);
+  --secondary: oklch(0.94 0.035 348);
+  --secondary-foreground: oklch(0.28 0.08 305);
+  --muted: oklch(0.955 0.015 300);
+  --muted-foreground: oklch(0.43 0.04 300);
+  --accent: oklch(0.9 0.11 92);
+  --accent-foreground: oklch(0.25 0.05 300);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.86 0.035 82);
-  --input: oklch(0.86 0.035 82);
-  --ring: oklch(0.51 0.09 30);
+  --border: oklch(0.87 0.03 300);
+  --input: oklch(0.87 0.03 300);
+  --ring: oklch(0.5 0.11 305);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -124,51 +124,67 @@
   body {
     @apply bg-background text-foreground;
     background-image: radial-gradient(
-      oklch(0.42 0.04 35 / 0.07) 0.7px,
+      oklch(0.42 0.04 300 / 0.045) 0.7px,
       transparent 0.7px
     );
-    background-size: 13px 13px;
+    background-size: 18px 18px;
   }
   button {
     cursor: pointer !important;
   }
 
-  @layer utilities {
-    .font-display {
-      font-family: var(--font-display);
-    }
+  :focus-visible {
+    outline: 3px solid #684281;
+    outline-offset: 3px;
+  }
+}
 
-    .stitch-border {
-      border: 1px dashed oklch(0.45 0.06 35 / 0.45);
-    }
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
 
-    .thread-line {
-      background: repeating-linear-gradient(
-        90deg,
-        oklch(0.42 0.08 30) 0 8px,
-        transparent 8px 14px
+  .stitch-border {
+    border: 1px dashed oklch(0.45 0.08 305 / 0.45);
+  }
+
+  .thread-line {
+    background: repeating-linear-gradient(
+      90deg,
+      oklch(0.42 0.08 305) 0 8px,
+      transparent 8px 14px
+    );
+    height: 1px;
+  }
+
+  .botanical-page {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        ellipse at 9% 12%,
+        oklch(0.82 0.09 355 / 0.16) 0 2rem,
+        transparent 2.1rem
+      ),
+      radial-gradient(
+        ellipse at 92% 26%,
+        oklch(0.82 0.07 145 / 0.15) 0 2.4rem,
+        transparent 2.5rem
+      ),
+      radial-gradient(
+        ellipse at 78% 92%,
+        oklch(0.84 0.08 82 / 0.16) 0 1.8rem,
+        transparent 1.9rem
       );
-      height: 1px;
-    }
+  }
+}
 
-    .botanical-page {
-      background-color: var(--background);
-      background-image:
-        radial-gradient(
-          ellipse at 9% 12%,
-          oklch(0.82 0.09 355 / 0.16) 0 2rem,
-          transparent 2.1rem
-        ),
-        radial-gradient(
-          ellipse at 92% 26%,
-          oklch(0.82 0.07 145 / 0.15) 0 2.4rem,
-          transparent 2.5rem
-        ),
-        radial-gradient(
-          ellipse at 78% 92%,
-          oklch(0.84 0.08 82 / 0.16) 0 1.8rem,
-          transparent 1.9rem
-        );
-    }
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

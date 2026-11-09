@@ -66,8 +66,10 @@ export function LoginForm({
       {...props}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Inicia sesión</h1>
-        <p className="text-muted-foreground text-sm text-balance">
+        <h1 className="font-display text-2xl font-semibold text-[#48235c]">
+          Inicia sesión
+        </h1>
+        <p className="text-muted-foreground text-base leading-6 text-balance">
           Accede a tu cuenta de Primaveral Bordados.
         </p>
       </div>
@@ -90,7 +92,7 @@ export function LoginForm({
             <Label htmlFor="password">Contraseña</Label>
             <Link
               href="/user/forgot-password"
-              className="min-h-11 py-3 text-right text-sm underline-offset-4 hover:underline"
+              className="min-h-11 py-3 text-right text-base text-[#48235c] underline-offset-4 hover:underline"
             >
               ¿Olvidaste tu contraseña?
             </Link>
@@ -110,7 +112,7 @@ export function LoginForm({
           <p
             role={response.status === "error" ? "alert" : "status"}
             className={cn(
-              "text-sm",
+              "text-base",
               response.status === "error" && "text-red-600",
               response.status === "ok" && "text-emerald-700",
               response.status === "loading" && "text-blue-600",
@@ -142,17 +144,17 @@ export function LoginForm({
           correo o pedir que te lo enviemos de nuevo.{" "}
           <Link
             href="/user/resend-verification"
-            className="inline-flex min-h-11 items-center font-medium text-stone-900 underline underline-offset-4"
+            className="inline-flex min-h-11 items-center font-medium text-[#48235c] underline underline-offset-4"
           >
             Corregir correo o reenviar confirmación
           </Link>
         </p>
       </div>
-      <div className="text-center text-sm">
+      <div className="text-center text-base">
         ¿No tienes una cuenta?{" "}
         <Link
           href="/user/signup"
-          className="inline-flex min-h-11 items-center underline underline-offset-4"
+          className="inline-flex min-h-11 items-center text-[#48235c] underline underline-offset-4"
         >
           Crear cuenta
         </Link>

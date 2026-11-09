@@ -19,6 +19,9 @@ process.env.BREVO_SENDER_EMAIL = "sender@example.test";
 process.env.APP_URL = "http://localhost:3000";
 
 const { createCaller } = await import("../src/server/api/root");
+const { createOrderInputSchema } = await import(
+  "../src/server/api/routers/order"
+);
 
 type TestUser = {
   id: string;
@@ -535,6 +538,30 @@ test("the complete account and checkout flow works with an in-memory database an
       else process.env[key] = value;
     }
   }
+});
+
+test("checkout only accepts the payment method that is actually available", () => {
+  const order = {
+    items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+    address: "Calle 10 # 20-30",
+    municipality: "Bogotá",
+    department: "Cundinamarca",
+  };
+
+  assert.equal(
+    createOrderInputSchema.safeParse({
+      ...order,
+      paymentMethod: "cash",
+    }).success,
+    true,
+  );
+  assert.equal(
+    createOrderInputSchema.safeParse({
+      ...order,
+      paymentMethod: "credit-card",
+    }).success,
+    false,
+  );
 });
 
 test("a Brevo failure does not leave a usable account verification link", async () => {
