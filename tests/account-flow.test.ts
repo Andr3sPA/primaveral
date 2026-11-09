@@ -22,6 +22,7 @@ const { createCaller } = await import("../src/server/api/root");
 const { createOrderInputSchema } = await import(
   "../src/server/api/routers/order"
 );
+const { productInputSchema } = await import("../src/server/api/routers/menu");
 
 type TestUser = {
   id: string;
@@ -652,6 +653,16 @@ test("checkout only accepts the payment method that is actually available", () =
     }).success,
     false,
   );
+});
+
+test("product names preserve Spanish accents and ñ through API validation", () => {
+  const product = productInputSchema.parse({
+    name: "  Bolso Rai\u0301z y Niño  ",
+    price: 25000,
+  });
+
+  assert.equal(product.name, "Bolso Raíz y Niño");
+  assert.equal(product.name.includes("?"), false);
 });
 
 test("a Brevo failure does not leave a usable account verification link", async () => {

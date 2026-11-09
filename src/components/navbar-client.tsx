@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Flower2, Menu, ShoppingBag } from "lucide-react";
+import { ChevronRight, Flower2, Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -117,45 +119,74 @@ export function NavbarClient() {
                 <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Primaveral Bordados</SheetTitle>
+            <SheetContent
+              side="right"
+              className="max-h-dvh w-[min(22rem,88vw)] gap-0 overflow-y-auto border-l border-[#e7dbea] bg-[#fffdf8] p-0"
+            >
+              <SheetHeader className="border-b border-[#e7dbea] bg-[#f7edf4] px-6 pt-5 pr-16 pb-4">
+                <span
+                  aria-hidden="true"
+                  className="mb-2 grid size-9 place-items-center rounded-full bg-[#f7e7a9] text-[#48235c]"
+                >
+                  <Flower2 className="size-5" aria-hidden="true" />
+                </span>
+                <SheetTitle className="font-display text-left text-2xl leading-tight font-semibold text-[#48235c]">
+                  Primaveral
+                </SheetTitle>
+                <SheetDescription className="text-left text-sm text-[#514060]">
+                  Bordados de Cartago
+                </SheetDescription>
               </SheetHeader>
               <nav
                 aria-label="Navegación principal"
-                className="mt-8 flex flex-col gap-5"
+                className="flex flex-col gap-1 px-4 py-4"
               >
                 {links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex min-h-11 items-center py-2 text-left text-lg text-[#48235c]"
-                  >
-                    {link.label}
-                  </Link>
+                  <SheetClose asChild key={link.href}>
+                    <Link
+                      href={link.href}
+                      aria-current={pathname === link.href ? "page" : undefined}
+                      className={`group flex min-h-12 items-center justify-between rounded-xl px-4 text-left text-base font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#684281] ${pathname === link.href ? "bg-[#eee2f0] text-[#48235c]" : "text-[#35203f] hover:bg-[#f5eaf4]"}`}
+                    >
+                      {link.label}
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="size-4 text-[#684281] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                      />
+                    </Link>
+                  </SheetClose>
                 ))}
                 {session ? (
-                  <>
-                    <Link
-                      href="/user/profile"
-                      className="flex min-h-11 items-center py-2 text-left text-lg text-[#48235c]"
-                    >
-                      Mi perfil
-                    </Link>
-                    <button
-                      className="min-h-11 py-2 text-left text-lg text-[#48235c]"
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                    >
-                      Cerrar sesión
-                    </button>
-                  </>
+                  <div className="mt-3 flex flex-col gap-1 border-t border-[#e7dbea] pt-3">
+                    <SheetClose asChild>
+                      <Link
+                        href="/user/profile"
+                        className="flex min-h-12 items-center rounded-xl px-4 text-left text-base font-medium text-[#35203f] transition-colors hover:bg-[#f5eaf4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#684281]"
+                      >
+                        Mi perfil
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button
+                        className="flex min-h-12 items-center rounded-xl px-4 text-left text-base font-medium text-[#35203f] transition-colors hover:bg-[#f5eaf4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#684281]"
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                      >
+                        Cerrar sesión
+                      </button>
+                    </SheetClose>
+                  </div>
                 ) : (
-                  <Link
-                    href="/user/signin"
-                    className="flex min-h-11 items-center py-2 text-left text-lg text-[#48235c]"
-                  >
-                    Iniciar sesión
-                  </Link>
+                  <div className="mt-3 border-t border-[#e7dbea] px-4 pt-4">
+                    <SheetClose asChild>
+                      <Button
+                        asChild
+                        size="lg"
+                        className="min-h-12 w-full justify-center text-base"
+                      >
+                        <Link href="/user/signin">Iniciar sesión</Link>
+                      </Button>
+                    </SheetClose>
+                  </div>
                 )}
               </nav>
             </SheetContent>
