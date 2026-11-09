@@ -52,6 +52,8 @@ function createMemoryDatabase(
       {
         id: "c123456789012345678901234",
         name: "Blusa",
+        image: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+        currency: "$",
         price: 25,
         stock: 5,
         available: true,
@@ -277,10 +279,14 @@ function createMemoryDatabase(
           createdAt: new Date(),
           ...data,
           orderItems: orderItems.create.map((item) => ({
+            id: `${orders.length + 1}-${item.menuItemId}`,
             quantity: item.quantity,
             subtotal: item.subtotal,
             menuItem: {
+              id: item.menuItemId,
               name: products.get(item.menuItemId)?.name ?? "Producto",
+              image: products.get(item.menuItemId)?.image ?? null,
+              currency: products.get(item.menuItemId)?.currency ?? "$",
             },
           })),
         };
@@ -610,6 +616,11 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(myOrders[0]?.id, registeredOrder.id);
     assert.equal(myOrders[0]?.status, "PENDING");
     assert.equal(myOrders[0]?.orderItems[0]?.menuItem.name, "Blusa");
+    assert.equal(
+      myOrders[0]?.orderItems[0]?.menuItem.image,
+      "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+    );
+    assert.equal(myOrders[0]?.orderItems[0]?.subtotal, 25);
   } finally {
     globalThis.fetch = originalFetch;
     for (const [key, value] of Object.entries(previousEmailEnv)) {

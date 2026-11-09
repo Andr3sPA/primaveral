@@ -1,7 +1,9 @@
 import { ProfileForm } from "@/components/ProfileForm";
 import { MyOrders } from "@/components/MyOrders";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/server/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {
@@ -17,12 +19,9 @@ export default async function ProfilePage() {
         <p className="text-muted-foreground">
           Administra tus datos y revisa el estado de tus compras.
         </p>
-        <a
-          href="#profile-details-heading"
-          className="inline-flex min-h-11 items-center font-medium text-violet-900 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-        >
-          Editar mis datos
-        </a>
+        <Button asChild size="lg" variant="outline" className="min-h-11">
+          <Link href="#profile-details-heading">Editar mis datos</Link>
+        </Button>
       </header>
       <MyOrders />
       <section aria-labelledby="profile-details-heading" className="space-y-4">
