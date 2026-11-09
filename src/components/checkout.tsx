@@ -147,7 +147,7 @@ export function Checkout() {
 
   if (!isHydrated || sessionStatus === "loading") {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
+      <main className="botanical-page mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
         Cargando tu carrito...
       </main>
     );
@@ -155,7 +155,7 @@ export function Checkout() {
 
   if (createOrder.isSuccess) {
     return (
-      <main className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
+      <main className="botanical-page mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
           <LockKeyhole />
         </div>
@@ -172,7 +172,7 @@ export function Checkout() {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
+    <main className="botanical-page mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
       <section>
         <button
           type="button"
@@ -187,7 +187,7 @@ export function Checkout() {
             ? "Elige una dirección guardada o indica una nueva."
             : "Puedes completar tu compra sin crear una cuenta."}
         </p>
-        <Card className="mt-8 border-stone-200 shadow-none">
+        <Card className="mt-8 rounded-2xl border-stone-200 shadow-sm">
           <CardContent className="p-6 sm:p-8">
             <Form {...form}>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -414,7 +414,7 @@ export function Checkout() {
         </Card>
       </section>
       <aside>
-        <Card className="border-stone-200 shadow-none">
+        <Card className="rounded-2xl border-stone-200 shadow-sm">
           <CardContent className="p-6">
             <h2 className="text-lg font-medium">Resumen</h2>
             <div className="mt-5 space-y-4">

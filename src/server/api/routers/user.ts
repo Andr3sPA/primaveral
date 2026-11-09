@@ -79,14 +79,14 @@ async function sendAccountTokenEmail(
     : "cambiar tu contraseña";
   const actionHost = new URL(actionUrl).host;
   const safeActionUrl = escapeHtml(actionUrl);
-  const textContent = `${trimmedName ?? "Hola"}, abre este enlace para ${requestDescription}: ${actionUrl} (dominio: ${actionHost}). El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.`;
+  const textContent = `${trimmedName ?? "Hola"}, usa este enlace para ${requestDescription}: ${actionUrl} Vence en ${expiry}. Si no solicitaste esto, ignora este mensaje.`;
 
   try {
     await sendBrevoEmail({
       to: email,
       subject,
       textContent,
-      htmlContent: `<p>${displayName},</p><p>Abre el enlace para ${requestDescription}.</p><p><a href="${safeActionUrl}">${action}</a></p><p>Destino: ${escapeHtml(actionHost)}</p><p>Enlace directo: <a href="${safeActionUrl}">${safeActionUrl}</a></p><p>El enlace vence en ${expiry}. Si no solicitaste esto, ignora este correo.</p>`,
+      htmlContent: `<p>${displayName},</p><p>Usa este enlace para ${requestDescription}.</p><p><a href="${safeActionUrl}" style="display:inline-block;border-radius:9999px;background:#8e5643;padding:14px 22px;color:#fff7ec;font-weight:600;text-decoration:none">${action}</a></p><p>Destino: ${escapeHtml(actionHost)}. El enlace vence en ${expiry}. Si no solicitaste esto, ignora este mensaje.</p>`,
     });
   } catch (error) {
     await db.verificationToken.deleteMany({

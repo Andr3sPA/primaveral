@@ -19,6 +19,9 @@ process.env.BREVO_SENDER_EMAIL = "sender@example.test";
 process.env.APP_URL = "http://localhost:3000";
 
 const { createCaller } = await import("../src/server/api/root");
+const { createOrderInputSchema } = await import(
+  "../src/server/api/routers/order"
+);
 
 type TestUser = {
   id: string;
@@ -308,6 +311,30 @@ test("account email links use only the explicit canonical APP_URL", () => {
   }
 });
 
+test("checkout only accepts the payment method that is actually available", () => {
+  const order = {
+    items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+    address: "Calle 10 # 20-30",
+    municipality: "Bogotá",
+    department: "Cundinamarca",
+  };
+
+  assert.equal(
+    createOrderInputSchema.safeParse({
+      ...order,
+      paymentMethod: "cash",
+    }).success,
+    true,
+  );
+  assert.equal(
+    createOrderInputSchema.safeParse({
+      ...order,
+      paymentMethod: "credit-card",
+    }).success,
+    false,
+  );
+});
+
 test("the complete account and checkout flow works with an in-memory database and mocked mail", async () => {
   const { database, users, verificationTokens, orders } =
     createMemoryDatabase();
@@ -344,7 +371,11 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(verificationLink.origin, "http://localhost:3000");
     assert.equal(verificationLink.pathname, "/user/verify-email");
     assert.match(sentEmails[0]!.htmlContent, /Destino: localhost:3000/);
-    assert.match(sentEmails[0]!.htmlContent, /Enlace directo: <a href=/);
+    assert.equal(
+      [...sentEmails[0]!.htmlContent.matchAll(/href="/g)].length,
+      1,
+      "the HTML email has one clear call to action instead of duplicate links",
+    );
     assert.match(sentEmails[0]!.textContent, /http:\/\/localhost:3000/);
     const user = users.get(email)!;
     await caller.user.registerUser({ email, password });

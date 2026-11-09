@@ -106,3 +106,25 @@ test("expired account links provide a clear next step", async () => {
   assert.match(reset, /Pedir un enlace nuevo/);
   assert.match(reset, /href="\/user\/forgot-password"/);
 });
+
+test("account and checkout pages use the shared botanical theme", async () => {
+  const paths = [
+    "src/app/user/signin/page.tsx",
+    "src/app/user/signup/page.tsx",
+    "src/app/user/forgot-password/page.tsx",
+    "src/app/user/resend-verification/page.tsx",
+    "src/app/user/verify-email/page.tsx",
+    "src/app/user/reset-password/page.tsx",
+    "src/app/user/profile/page.tsx",
+    "src/components/checkout.tsx",
+  ];
+  const [pages, styles] = await Promise.all([
+    Promise.all(paths.map(readSource)),
+    readSource("src/styles/globals.css"),
+  ]);
+
+  for (const source of pages) assert.match(source, /botanical-page/);
+  assert.match(styles, /\.botanical-page\s*\{[\s\S]*background-image:/);
+  assert.match(styles, /oklch\(0\.82 0\.09 355/);
+  assert.match(styles, /oklch\(0\.82 0\.07 145/);
+});

@@ -37,9 +37,9 @@ verificación y recuperación siempre se generan desde esa variable y apuntan a
 `/user/verify-email` o `/user/reset-password`; no se infieren del dominio de la
 solicitud ni de `VERCEL_URL`, `AUTH_URL` o `NEXTAUTH_URL`. En producción debe
 usar HTTPS. Define un `APP_URL` explícito en cada entorno de Vercel y no uses la
-URL efímera de una Preview como dirección de correo. El mensaje HTML y su
-versión de texto muestran el dominio y el enlace absoluto para que el destino
-sea visible.
+URL efímera de una Preview como dirección de correo. El mensaje HTML muestra un único botón de acción y el dominio del destino; la
+versión de texto incluye el enlace absoluto para que el destinatario también
+pueda copiarlo.
 
 El código envía a Brevo el enlace directo y no activa reescritura ni seguimiento
 de clics en el mensaje. Si Brevo transforma el destino al entregar, revisa la
