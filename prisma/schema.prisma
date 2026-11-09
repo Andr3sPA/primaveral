@@ -94,21 +94,22 @@ enum FulfillmentType {
 
 // Tabla de órdenes de los clientes
 model Order {
-  id           String      @id @default(cuid())
-  userId       String?
-  user         User?       @relation("UserOrders", fields: [userId], references: [id], onDelete: SetNull)
-  guestEmail   String?
-  guestName    String?
-  status       OrderStatus @default(PENDING)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  total        Float
-  phone        String?
-  address      String
-  municipality String?
-  department   String?
-  orderItems   OrderItem[]
-  payment      Payment?
+  id            String      @id @default(cuid())
+  userId        String?
+  user          User?       @relation("UserOrders", fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail    String?
+  guestName     String?
+  trackingToken String?     @unique
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  total         Float
+  phone         String?
+  address       String
+  municipality  String?
+  department    String?
+  orderItems    OrderItem[]
+  payment       Payment?
 }
 
 // Estado de una orden

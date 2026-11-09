@@ -266,7 +266,13 @@ function createMemoryDatabase(
       },
     },
     order: {
-      create: async ({ data }: { data: Record<string, unknown> }) => {
+      create: async ({
+        data,
+        select,
+      }: {
+        data: Record<string, unknown>;
+        select?: Record<string, boolean>;
+      }) => {
         const orderItems = data.orderItems as {
           create: Array<{
             menuItemId: string;
@@ -275,7 +281,7 @@ function createMemoryDatabase(
           }>;
         };
         const order = {
-          id: `order-${orders.length + 1}`,
+          id: `c${String(orders.length + 1).padStart(24, "0")}`,
           status: "PENDING",
           createdAt: new Date(),
           ...data,
@@ -292,7 +298,58 @@ function createMemoryDatabase(
           })),
         };
         orders.push(order);
-        return order;
+        if (!select) return order;
+        const orderFields: Record<string, unknown> = Object.assign({}, order);
+        return Object.fromEntries(
+          Object.keys(select).map((field) => [field, orderFields[field]]),
+        );
+      },
+      findUnique: async ({
+        where,
+      }: {
+        where: { id?: string; trackingToken?: string };
+      }) => {
+        const order =
+          orders.find(
+            (candidate) =>
+              (where.id !== undefined && candidate.id === where.id) ||
+              (where.trackingToken !== undefined &&
+                candidate.trackingToken === where.trackingToken),
+          ) ?? null;
+        if (!order || where.trackingToken === undefined) return order;
+        return {
+          id: order.id,
+          status: order.status,
+          createdAt: order.createdAt,
+          total: order.total,
+          orderItems: order.orderItems,
+        };
+      },
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: {
+          id?: string;
+          status?: string;
+          userId?: string | null;
+          guestEmail?: string;
+        };
+        data: Record<string, unknown>;
+      }) => {
+        const matchingOrders = orders.filter(
+          (order) =>
+            (where.id === undefined || order.id === where.id) &&
+            (where.status === undefined || order.status === where.status) &&
+            (where.userId === undefined ||
+              (where.userId === null
+                ? order.userId === null || order.userId === undefined
+                : order.userId === where.userId)) &&
+            (where.guestEmail === undefined ||
+              order.guestEmail === where.guestEmail),
+        );
+        matchingOrders.forEach((order) => Object.assign(order, data));
+        return { count: matchingOrders.length };
       },
       findMany: async ({ where }: { where: { userId: string } }) =>
         orders.filter((order) => order.userId === where.userId),
@@ -389,6 +446,7 @@ test("the complete account and checkout flow works with an in-memory database an
   const sentEmails: Array<{
     htmlContent: string;
     textContent: string;
+    subject: string;
     to: Array<{ email: string }>;
   }> = [];
   const previousEmailEnv = {
@@ -399,9 +457,11 @@ test("the complete account and checkout flow works with an in-memory database an
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     assert.equal(String(input), "https://api.brevo.com/v3/smtp/email");
-    sentEmails.push(
-      JSON.parse(String(init?.body)) as (typeof sentEmails)[number],
-    );
+    const email = JSON.parse(String(init?.body)) as (typeof sentEmails)[number];
+    if (email.to[0]?.email === "primaveralbordados@gmail.com") {
+      assert.ok(orders.length > 0, "order notification follows persistence");
+    }
+    sentEmails.push(email);
     return new Response(null, { status: 201 });
   };
 
@@ -593,6 +653,8 @@ test("the complete account and checkout flow works with an in-memory database an
     const guestOrder = await caller.order.createNew({
       ...orderInput,
       email: "guest@example.test",
+      name: "Cliente invitado",
+      phone: "3105551234",
     });
     assert.equal(guestOrder.guestEmail, "guest@example.test");
     assert.equal(guestOrder.userId, undefined);
@@ -603,6 +665,64 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.equal(registeredOrder.userId, user.id);
     assert.equal(user.municipality, "Bogotá");
     assert.equal(orders.length, 2);
+    assert.equal(sentEmails.length, 8);
+    const guestOrderNotification = sentEmails.find(
+      (email) =>
+        email.to[0]?.email === "primaveralbordados@gmail.com" &&
+        email.subject.includes(guestOrder.id),
+    )!;
+    assert.equal(
+      guestOrderNotification.to[0]?.email,
+      "primaveralbordados@gmail.com",
+    );
+    assert.match(
+      guestOrderNotification.subject,
+      new RegExp(`Nuevo pedido ${guestOrder.id}`),
+    );
+    assert.match(guestOrderNotification.textContent, /Cliente invitado/);
+    assert.match(guestOrderNotification.textContent, /guest@example\.test/);
+    assert.match(guestOrderNotification.textContent, /3105551234/);
+    assert.match(guestOrderNotification.textContent, /Calle 10 # 20-30/);
+    assert.match(guestOrderNotification.textContent, /Bogotá/);
+    assert.match(guestOrderNotification.textContent, /Cundinamarca/);
+    assert.match(guestOrderNotification.textContent, /1 × Blusa/);
+    assert.match(guestOrderNotification.textContent, /Total: \$25,00/);
+    assert.match(guestOrderNotification.htmlContent, /<h1[^>]*>Nuevo pedido/);
+    const guestTrackingUrl = new URL(
+      guestOrder.trackingUrl!,
+      "https://primaveral.example.test",
+    );
+    const guestTrackingToken = guestTrackingUrl.searchParams.get("token")!;
+    assert.notEqual(
+      (orders[0] as Record<string, unknown>).trackingToken,
+      guestTrackingToken,
+      "the database stores only the tracking token digest",
+    );
+    assert.equal(guestTrackingUrl.pathname, "/orders/track");
+    const guestConfirmation = sentEmails.find(
+      (email) => email.to[0]?.email === "guest@example.test",
+    )!;
+    assert.match(guestConfirmation.textContent, /estado de tu pedido/);
+    assert.match(
+      guestConfirmation.textContent,
+      /https:\/\/primaveral\.example\.test\/orders\/track\?token=/,
+    );
+    const publicTracking = await caller.order.getGuestOrderTracking({
+      token: guestTrackingToken,
+    });
+    assert.equal(publicTracking?.id, guestOrder.id);
+    assert.equal(publicTracking?.orderItems[0]?.menuItem.name, "Blusa");
+    assert.equal(
+      "guestEmail" in (publicTracking ?? {}),
+      false,
+      "public tracking never exposes customer contact details",
+    );
+    assert.equal(
+      await caller.order.getGuestOrderTracking({
+        token: "invalid-token-123456",
+      }),
+      null,
+    );
 
     orders.push({
       id: "another-users-order",
@@ -622,12 +742,271 @@ test("the complete account and checkout flow works with an in-memory database an
       "https://res.cloudinary.com/demo/image/upload/sample.jpg",
     );
     assert.equal(myOrders[0]?.orderItems[0]?.subtotal, 25);
+    const registeredOrderNotification = sentEmails.find(
+      (email) =>
+        email.to[0]?.email === "primaveralbordados@gmail.com" &&
+        email.subject.includes(registeredOrder.id),
+    )!;
+    assert.match(
+      registeredOrderNotification.textContent,
+      /customer@example\.test/,
+    );
+    assert.match(
+      registeredOrderNotification.textContent,
+      /Cliente actualizado/,
+    );
   } finally {
     globalThis.fetch = originalFetch;
     for (const [key, value] of Object.entries(previousEmailEnv)) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
+  }
+});
+
+test("guest tracking stays private until email verification associates the order", async () => {
+  const { database, users, orders } = createMemoryDatabase();
+  const sentEmails: Array<{
+    htmlContent: string;
+    subject: string;
+    textContent: string;
+    to: Array<{ email: string }>;
+  }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    sentEmails.push(
+      JSON.parse(String(init?.body)) as (typeof sentEmails)[number],
+    );
+    return new Response(null, { status: 201 });
+  };
+
+  try {
+    const caller = createCaller(createContext(database));
+    const guestOrder = await caller.order.createNew({
+      items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+      address: "Calle 10 # 20-30",
+      municipality: "Bogotá",
+      department: "Cundinamarca",
+      email: "  Customer@Example.test ",
+      paymentMethod: "cash",
+    });
+    assert.equal(guestOrder.guestEmail, "customer@example.test");
+    const token = new URL(
+      guestOrder.trackingUrl!,
+      "https://primaveral.example.test",
+    ).searchParams.get("token")!;
+    const pendingTracking = await caller.order.getGuestOrderTracking({ token });
+    assert.equal(pendingTracking?.id, guestOrder.id);
+    assert.equal(orders[0]?.userId, undefined);
+
+    await caller.user.registerUser({
+      email: "CUSTOMER@example.test",
+      password: "TestPassword1!",
+    });
+    const account = users.get("customer@example.test")!;
+    const unverifiedAccountCaller = createCaller(
+      createContext(database, account),
+    );
+    assert.deepEqual(await unverifiedAccountCaller.user.getMyOrders(), []);
+    assert.equal(
+      await caller.user.authenticateUser({
+        email: "CUSTOMER@example.test",
+        password: "TestPassword1!",
+      }),
+      null,
+    );
+
+    const verificationEmail = sentEmails.find((email) =>
+      email.subject.includes("Confirma tu correo"),
+    )!;
+    const tokenFromEmail = new URL(
+      verificationEmail.htmlContent.match(/href="([^"]+)"/)![1]!,
+    ).searchParams.get("token")!;
+    await caller.user.verifyEmail({ token: tokenFromEmail });
+
+    assert.equal(orders[0]?.userId, account.id);
+    const verifiedAccountCaller = createCaller(
+      createContext(database, account),
+    );
+    const accountOrders = await verifiedAccountCaller.user.getMyOrders();
+    assert.equal(accountOrders.length, 1);
+    assert.equal(accountOrders[0]?.id, guestOrder.id);
+    assert.equal(
+      (await caller.order.getGuestOrderTracking({ token }))?.id,
+      guestOrder.id,
+      "verification does not invalidate the original guest tracking link",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("order status emails go to the customer only after a real status change", async () => {
+  const { database, users, orders } = createMemoryDatabase();
+  const emails: Array<{
+    subject: string;
+    textContent: string;
+    to: Array<{ email: string }>;
+  }> = [];
+  const statusesAtEmail: Array<string | undefined> = [];
+  let shouldFailStatusEmail = false;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    const email = JSON.parse(String(init?.body)) as (typeof emails)[number];
+    if (email.subject.startsWith("Actualización")) {
+      const currentStatus = orders[0]?.status;
+      statusesAtEmail.push(
+        typeof currentStatus === "string" ? currentStatus : undefined,
+      );
+    }
+    emails.push(email);
+    if (email.subject.startsWith("Actualización") && shouldFailStatusEmail) {
+      throw new Error("Brevo unavailable");
+    }
+    return new Response(null, { status: 201 });
+  };
+  const admin: TestUser = {
+    id: "admin-1",
+    email: "admin@example.test",
+    password: "unused",
+    emailVerified: new Date(),
+    name: "Admin",
+    phone: null,
+    address: null,
+    municipality: null,
+    department: null,
+    role: "ADMIN",
+  };
+  users.set(admin.email, admin);
+
+  try {
+    const caller = createCaller(createContext(database));
+    const order = await caller.order.createNew({
+      items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+      address: "Calle 10 # 20-30",
+      municipality: "Bogotá",
+      department: "Cundinamarca",
+      email: "cliente@example.test",
+      paymentMethod: "cash",
+    });
+    const adminCaller = createCaller(createContext(database, admin));
+    await adminCaller.order.updateOrderStatus({
+      orderId: order.id,
+      status: "PREPARING",
+    });
+    const firstStatusEmail = emails.find((email) =>
+      email.subject.startsWith("Actualización"),
+    )!;
+    assert.equal(firstStatusEmail.to[0]?.email, "cliente@example.test");
+    assert.match(firstStatusEmail.textContent, /Preparando/);
+    assert.match(firstStatusEmail.textContent, /enlace de seguimiento/);
+    await adminCaller.order.updateOrderStatus({
+      orderId: order.id,
+      status: "PREPARING",
+    });
+    assert.equal(
+      emails.filter((email) => email.subject.startsWith("Actualización"))
+        .length,
+      1,
+      "repeating the current status does not send another email",
+    );
+    shouldFailStatusEmail = true;
+    await adminCaller.order.updateOrderStatus({
+      orderId: order.id,
+      status: "READY",
+    });
+    assert.equal(
+      emails.filter((email) => email.subject.startsWith("Actualización"))
+        .length,
+      2,
+    );
+    assert.equal(orders[0]?.status, "READY");
+    assert.deepEqual(statusesAtEmail, ["PREPARING", "READY"]);
+
+    shouldFailStatusEmail = false;
+    const customer: TestUser = {
+      id: "customer-1",
+      email: "cuenta@example.test",
+      password: "unused",
+      emailVerified: new Date(),
+      name: "Cliente",
+      phone: null,
+      address: null,
+      municipality: null,
+      department: null,
+      role: "CLIENT",
+    };
+    users.set(customer.email, customer);
+    const registeredCaller = createCaller(createContext(database, customer));
+    const registeredOrder = await registeredCaller.order.createNew({
+      items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+      address: "Calle 10 # 20-30",
+      municipality: "Bogotá",
+      department: "Cundinamarca",
+      paymentMethod: "cash",
+    });
+    await adminCaller.order.updateOrderStatus({
+      orderId: registeredOrder.id,
+      status: "PREPARING",
+    });
+    const registeredStatusEmail = emails.find(
+      (email) =>
+        email.subject.startsWith("Actualización") &&
+        email.subject.includes(registeredOrder.id),
+    )!;
+    assert.equal(registeredStatusEmail.to[0]?.email, "cuenta@example.test");
+    assert.match(registeredStatusEmail.textContent, /Mi perfil/);
+    assert.doesNotMatch(
+      registeredStatusEmail.textContent,
+      /enlace de seguimiento/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a failed order notification does not fail or roll back the saved order", async () => {
+  const { database, orders } = createMemoryDatabase();
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const loggedErrors: unknown[][] = [];
+  let notificationAttempts = 0;
+  globalThis.fetch = async (input, init) => {
+    notificationAttempts += 1;
+    assert.equal(String(input), "https://api.brevo.com/v3/smtp/email");
+    const email = JSON.parse(String(init?.body)) as {
+      to: Array<{ email: string }>;
+    };
+    assert.equal(email.to[0]?.email, "primaveralbordados@gmail.com");
+    assert.equal(
+      orders.length,
+      1,
+      "failed email is attempted after persistence",
+    );
+    return new Response(null, { status: 503 });
+  };
+  console.error = (...args: unknown[]) => loggedErrors.push(args);
+
+  try {
+    const caller = createCaller(createContext(database));
+    const order = await caller.order.createNew({
+      items: [{ productId: "c123456789012345678901234", quantity: 1 }],
+      address: "Calle 10 # 20-30",
+      municipality: "Bogotá",
+      department: "Cundinamarca",
+      email: "cliente@example.test",
+      paymentMethod: "cash",
+    });
+
+    assert.match(order.id, /^c\d{24}$/);
+    assert.equal(orders.length, 1);
+    assert.equal(notificationAttempts, 2);
+    assert.equal(loggedErrors.length, 2);
+    assert.match(String(loggedErrors[0]?.[0]), /No se pudo enviar el aviso/);
+    assert.doesNotMatch(JSON.stringify(loggedErrors), /cliente@example\.test/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
   }
 });
 
