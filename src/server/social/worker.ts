@@ -23,6 +23,7 @@ const MEDIA_POLL_DELAY_MS = 5 * 60 * 1000;
 
 type ClaimedPublication = {
   id: string;
+  menuItemId: string;
   platform: PublicationPlatform;
   payload: Prisma.JsonValue;
   attempts: number;
@@ -158,6 +159,7 @@ export async function processDuePublications(db: PrismaClient) {
     WHERE publication."id" = ready."id"
     RETURNING
       publication."id",
+      publication."menuItemId",
       publication."platform",
       publication."payload",
       publication."attempts",
@@ -169,6 +171,7 @@ export async function processDuePublications(db: PrismaClient) {
     published: 0,
     deferred: 0,
     failed: 0,
+    cancelled: 0,
   };
   for (const job of jobs) {
     if (!isPublicationPlatform(job.platform)) {
@@ -180,6 +183,27 @@ export async function processDuePublications(db: PrismaClient) {
         "La plataforma de publicación no está soportada.",
       );
       summary.failed += 1;
+      continue;
+    }
+
+    const product = await db.menuItem.findUnique({
+      where: { id: job.menuItemId },
+      select: {
+        autoPublishToSocial: true,
+        available: true,
+        stock: true,
+      },
+    });
+    if (
+      !product ||
+      !product.autoPublishToSocial ||
+      !product.available ||
+      product.stock <= 0
+    ) {
+      await updateClaimed(db, job.id, leaseToken, {
+        status: ProductPublicationStatus.CANCELLED,
+      });
+      summary.cancelled += 1;
       continue;
     }
 

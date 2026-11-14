@@ -111,9 +111,32 @@ test("Facebook publishes through the versioned Page API without putting the toke
     "Bearer test-token",
   );
   assert.match(
-    new URLSearchParams(requestBody).get("message") ?? "",
+    new URLSearchParams(requestBody).get("caption") ?? "",
     /Pídelo por WhatsApp/,
   );
+});
+
+test("Facebook text-only posts use the Page feed message parameter", async () => {
+  let requestUrl = "";
+  let requestBody = "";
+  const publisher = createMetaPublisher(
+    {
+      pageId: "page-id",
+      accessToken: "test-token",
+      graphApiVersion: "v27.0",
+    },
+    async (input, init) => {
+      requestUrl = String(input);
+      requestBody = String(init?.body);
+      return Response.json({ id: "post-id" });
+    },
+  );
+
+  await publisher.publishFacebook({ ...payload, imageUrl: null });
+  const params = new URLSearchParams(requestBody);
+  assert.match(requestUrl, /graph\.facebook\.com\/v27\.0\/page-id\/feed$/);
+  assert.match(params.get("message") ?? "", /Pídelo por WhatsApp/);
+  assert.equal(params.has("caption"), false);
 });
 
 test("Instagram creates, checks, and publishes a media container", async () => {

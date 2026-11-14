@@ -27,6 +27,11 @@ export const env = createEnv({
     META_PAGE_ID: z.string().min(1).optional(),
     META_INSTAGRAM_USER_ID: z.string().min(1).optional(),
     META_PAGE_ACCESS_TOKEN: z.string().min(1).optional(),
+    META_APP_ID: z.string().min(1).optional(),
+    META_APP_SECRET: z.string().min(1).optional(),
+    META_USER_TOKEN: z.string().min(1).optional(),
+    META_APP_TOKEN: z.string().min(1).optional(),
+    META_ACCESS_TOKEN: z.string().min(1).optional(),
     META_GRAPH_API_VERSION: z
       .string()
       .regex(/^v\d+\.\d+$/)
@@ -67,6 +72,11 @@ export const env = createEnv({
     META_PAGE_ID: process.env.META_PAGE_ID,
     META_INSTAGRAM_USER_ID: process.env.META_INSTAGRAM_USER_ID,
     META_PAGE_ACCESS_TOKEN: process.env.META_PAGE_ACCESS_TOKEN,
+    META_APP_ID: process.env.META_APP_ID,
+    META_APP_SECRET: process.env.META_APP_SECRET,
+    META_USER_TOKEN: process.env.META_USER_TOKEN,
+    META_APP_TOKEN: process.env.META_APP_TOKEN,
+    META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
     META_GRAPH_API_VERSION: process.env.META_GRAPH_API_VERSION,
     NODE_ENV: process.env.NODE_ENV,
   },

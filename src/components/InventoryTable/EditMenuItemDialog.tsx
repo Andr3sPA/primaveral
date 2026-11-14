@@ -23,6 +23,7 @@ interface MenuItem {
   currency: string;
   price: number;
   available: boolean;
+  autoPublishToSocial: boolean;
   createdAt: Date;
   updatedAt: Date;
   image: string | null;
@@ -44,6 +45,9 @@ export default function EditMenuItemDialog({
   const [currency, setCurrency] = React.useState(menuItem.currency);
   const [price, setPrice] = React.useState(menuItem.price.toString());
   const [image, setImage] = React.useState(menuItem.image ?? "");
+  const [autoPublishToSocial, setAutoPublishToSocial] = React.useState(
+    menuItem.autoPublishToSocial,
+  );
   const [fulfillmentType, setFulfillmentType] = React.useState(
     menuItem.fulfillmentType,
   );
@@ -74,6 +78,7 @@ export default function EditMenuItemDialog({
       currency,
       price: parseFloat(price),
       image: image || undefined,
+      autoPublishToSocial,
       fulfillmentType,
       leadTimeDays: parseInt(leadTimeDays, 10),
     });
@@ -142,6 +147,27 @@ export default function EditMenuItemDialog({
               value={image}
               onChange={(e) => setImage(e.target.value)}
             />
+          </div>
+          <div className="flex items-start gap-3 rounded-md border p-3">
+            <input
+              id="autoPublishToSocial"
+              type="checkbox"
+              checked={autoPublishToSocial}
+              onChange={(event) =>
+                setAutoPublishToSocial(event.currentTarget.checked)
+              }
+              className="border-input accent-primary mt-1 size-4 rounded"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="autoPublishToSocial">
+                Auto-publicar en redes sociales
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Se publica solo si está disponible, tiene stock y la plataforma
+                está activada. Desactivarlo cancela publicaciones aún no
+                procesadas.
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

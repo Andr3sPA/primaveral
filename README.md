@@ -72,12 +72,18 @@ repositorio. El endpoint acepta únicamente JPG, PNG y WebP de hasta 8 MB.
 ### Publicación automática en Facebook e Instagram
 
 La publicación automática se configura desde `/admin/social` y permanece
-desactivada hasta que un administrador la habilite por plataforma. Los
-productos disponibles y con stock positivo se agregan a la cola al crearse o
-cuando pasan a estar disponibles; activar la opción no publica en bloque todo
-el inventario existente. Cada plataforma mantiene su propio estado. La cola se
-procesa mediante el cron de Vercel cada cinco minutos; Vercel ejecuta cron jobs
-en despliegues de producción, no en Preview.
+desactivada hasta que un administrador la habilite por plataforma. Cada
+producto requiere además activar `Auto-publicar en redes sociales` al crearlo o
+editarlo; el valor predeterminado es desactivado. Solo se encola al crear un
+producto elegible, en su primera transición a disponible con stock, o al
+activar explícitamente el opt-in. Las ediciones normales no crean trabajos y
+activar una plataforma no hace backfill de productos sin opt-in. Desactivar el
+opt-in cancela los trabajos que aún no comenzaron; cada plataforma conserva su
+propio estado. La cola se procesa mediante el cron de Vercel cada cinco
+minutos; Vercel ejecuta cron jobs en despliegues de producción, no en Preview.
+El schedule cada cinco minutos requiere un plan Vercel Pro o Enterprise según
+la [documentación de Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing);
+no se debe desplegar este cron en Hobby, cuyo límite de frecuencia es diario.
 
 Configura estas variables en el entorno **del servidor** de Vercel Production
 (y en un entorno Meta de prueba independiente si vas a validar Preview):
@@ -98,6 +104,24 @@ administradora debe provisionar un Page access token vigente y renovarlo por el
 proceso autorizado de Meta. La aplicación no promete renovar automáticamente
 los tokens.
 
+Los nombres `META_APP_ID`, `META_APP_SECRET`, `META_USER_TOKEN`,
+`META_APP_TOKEN` y `META_ACCESS_TOKEN` se reconocen únicamente como variables
+de servidor de la configuración Meta existente. No se usan para publicar ni se
+tratan como alias entre sí: en particular, `META_ACCESS_TOKEN` no se asume como
+Page access token. Las claves identificadas no incluyen
+`META_PAGE_ACCESS_TOKEN`, y ninguna se mapea a ella. El publicador consume
+exclusivamente `META_PAGE_ACCESS_TOKEN`, que debe provisionarse como tal por un
+administrador autorizado. No copies valores desde un `.env` al repositorio.
+
+El Page ID confirmado en la solicitud original es `1770849856475843`; asígnalo
+a `META_PAGE_ID` en el entorno de servidor, no en código. No se identificó un
+`META_INSTAGRAM_USER_ID` en las variables disponibles. Para resolverlo sin
+exponer tokens, un administrador puede consultar el endpoint oficial de Meta
+`GET /{page-id}?fields=instagram_business_account` con un Page access token
+autorizado en el encabezado Bearer; configura el ID profesional devuelto como
+`META_INSTAGRAM_USER_ID`. La aplicación no realiza esta consulta ni valida o
+intercambia los tokens automáticamente.
+
 La publicación en Pages requiere los permisos y tareas que correspondan a la
 cuenta y al método de inicio de sesión; revisa `pages_manage_posts`,
 `pages_manage_engagement`, `pages_read_engagement` y
@@ -117,7 +141,9 @@ y [Graph API changelog](https://developers.facebook.com/documentation/developmen
 La versión configurada por defecto es `v27.0`; revisa el changelog antes de
 cambiarla o actualizarla.
 
-Facebook publica una foto o un post con enlace al producto. Instagram crea un
+Facebook publica fotos mediante `/{page-id}/photos` con `caption`, o posts de
+texto/enlace mediante `/{page-id}/feed` con `message` ([Page Photos](https://developers.facebook.com/docs/graph-api/reference/page/photos/)).
+Instagram crea un
 media container usando una URL JPEG pública (las imágenes Cloudinary se
 transforman a JPEG), consulta su estado y solo después lo publica. En Instagram,
 el link de WhatsApp del caption puede no ser clicable; el footer de la tienda y
@@ -147,7 +173,7 @@ npm run dev
 
 `npm run db:push` sirve solo para crear o sincronizar una base local aislada;
 nunca lo ejecutes contra producción. El repositorio aún no tiene una
-migración inicial: las dos migraciones existentes son incrementales. El
+migración inicial: las migraciones existentes son incrementales. El
 comando `vercel-build` solo compila y nunca modifica la base de datos. Antes de
 ejecutar `npm run db:migrate` contra Neon, sigue la guía de [baseline y
 migraciones de Prisma](docs/prisma-neon-migrations.es.md), que exige respaldo,

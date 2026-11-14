@@ -24,6 +24,7 @@ const schema = z.object({
   category: z.string().min(2),
   price: z.coerce.number().positive(),
   stock: z.coerce.number().int().min(0),
+  autoPublishToSocial: z.boolean(),
   image: z.string().url().optional().or(z.literal("")),
   sizes: z.string().optional(),
   colors: z.string().optional(),
@@ -39,6 +40,7 @@ export default function RegisterMenuItem() {
     defaultValues: {
       category: "Novedades",
       stock: 1,
+      autoPublishToSocial: false,
       sizes: "S, M, L",
       colors: "",
       fulfillmentType: "READY_TO_SHIP",
@@ -76,7 +78,9 @@ export default function RegisterMenuItem() {
               image = result.url;
             } catch (error) {
               toast.error(
-                error instanceof Error ? error.message : "Error al subir imagen",
+                error instanceof Error
+                  ? error.message
+                  : "Error al subir imagen",
               );
               return;
             } finally {
@@ -125,20 +129,15 @@ export default function RegisterMenuItem() {
           )}
         />
         <div className="space-y-2">
-          <label
-            htmlFor="product-image-file"
-            className="text-sm font-medium"
-          >
+          <label htmlFor="product-image-file" className="text-sm font-medium">
             Subir imagen a Cloudinary
           </label>
-            <Input
-              id="product-image-file"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(event) =>
-                setImageFile(event.target.files?.[0] ?? null)
-              }
-            />
+          <Input
+            id="product-image-file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+          />
           <p className="text-muted-foreground text-xs">
             JPG, PNG o WebP. Máximo 8 MB. Si eliges archivo, reemplaza la URL.
           </p>
@@ -201,6 +200,31 @@ export default function RegisterMenuItem() {
           />
           <FormField
             control={form.control}
+            name="autoPublishToSocial"
+            render={({ field }) => (
+              <FormItem className="flex items-start gap-3 rounded-md border p-4">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={(event) =>
+                      field.onChange(event.currentTarget.checked)
+                    }
+                    className="border-input accent-primary mt-1 size-4 rounded"
+                  />
+                </FormControl>
+                <div className="space-y-1">
+                  <FormLabel>Auto-publicar en redes sociales</FormLabel>
+                  <p className="text-muted-foreground text-xs">
+                    Solo se procesará si el producto está disponible, tiene
+                    stock y la plataforma está activada en el panel social.
+                  </p>
+                </div>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
             name="image"
             render={({ field }) => (
               <FormItem>
@@ -226,9 +250,7 @@ export default function RegisterMenuItem() {
                     className="border-input bg-background ring-offset-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
                   >
                     <option value="READY_TO_SHIP">Envío inmediato</option>
-                    <option value="SOURCED_TO_ORDER">
-                      Traer por encargo
-                    </option>
+                    <option value="SOURCED_TO_ORDER">Traer por encargo</option>
                   </select>
                 </FormControl>
                 <FormMessage />

@@ -129,7 +129,8 @@ export function createMetaPublisher(
         ? `${encodeURIComponent(config.pageId)}/photos`
         : `${encodeURIComponent(config.pageId)}/feed`;
       const params = new URLSearchParams({
-        message: createPublicationCaption(payload),
+        [payload.imageUrl ? "caption" : "message"]:
+          createPublicationCaption(payload),
       });
       if (payload.imageUrl) {
         params.set("url", requirePublicHttpsImageUrl(payload.imageUrl));

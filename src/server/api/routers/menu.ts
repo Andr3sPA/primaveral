@@ -5,7 +5,13 @@ import {
   adminProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
-import { FulfillmentType, type MenuItem, type Prisma } from "@prisma/client";
+import {
+  FulfillmentType,
+  ProductPublicationStatus,
+  PublicationPlatform,
+  type MenuItem,
+  type Prisma,
+} from "@prisma/client";
 import {
   createPublicationIdempotencyKey,
   createPublicationPayload,
@@ -26,26 +32,100 @@ export const productInputSchema = z.object({
   colors: z.array(z.string().trim().min(1)).max(12).default([]),
   stock: z.number().int().min(0).max(100000).default(0),
   featured: z.boolean().default(false),
+  autoPublishToSocial: z.boolean().optional(),
   fulfillmentType: z.nativeEnum(FulfillmentType).default("READY_TO_SHIP"),
   leadTimeDays: z.number().int().min(0).max(365).default(0),
 });
 
-async function enqueuePublicProduct(
+type ProductPublicationState = Pick<
+  MenuItem,
+  "autoPublishToSocial" | "available" | "stock"
+>;
+
+function isEligibleForPublication(product: ProductPublicationState) {
+  return product.available && product.stock > 0;
+}
+
+export function shouldEnqueuePublicProduct(
+  previous: ProductPublicationState | null,
+  current: ProductPublicationState,
+) {
+  if (!current.autoPublishToSocial || !isEligibleForPublication(current)) {
+    return false;
+  }
+  if (!previous) return true;
+  return (
+    (!previous.autoPublishToSocial && current.autoPublishToSocial) ||
+    (!isEligibleForPublication(previous) && isEligibleForPublication(current))
+  );
+}
+
+export function shouldCancelPublications(
+  previous: ProductPublicationState,
+  current: ProductPublicationState,
+) {
+  return (
+    (previous.autoPublishToSocial && !current.autoPublishToSocial) ||
+    (isEligibleForPublication(previous) && !isEligibleForPublication(current))
+  );
+}
+
+async function synchronizeProductPublications(
   transaction: Prisma.TransactionClient,
+  previous: ProductPublicationState | null,
   item: MenuItem,
 ) {
-  if (!item.available || item.stock <= 0) return;
-
-  const settings = await transaction.socialPublishingSettings.findUnique({
-    where: { id: "primary" },
-  });
-  const platforms = [
-    ...(settings?.facebookEnabled ? ["FACEBOOK" as const] : []),
-    ...(settings?.instagramEnabled ? ["INSTAGRAM" as const] : []),
-  ];
-  if (platforms.length === 0) return;
+  if (previous && shouldCancelPublications(previous, item)) {
+    await transaction.productPublication.updateMany({
+      where: {
+        menuItemId: item.id,
+        status: {
+          in: [
+            ProductPublicationStatus.PENDING,
+            ProductPublicationStatus.WAITING_FOR_MEDIA,
+            ProductPublicationStatus.RETRY_WAIT,
+          ],
+        },
+      },
+      data: {
+        status: ProductPublicationStatus.CANCELLED,
+        leaseToken: null,
+        leaseExpiresAt: null,
+      },
+    });
+  }
+  if (!shouldEnqueuePublicProduct(previous, item)) return;
 
   const payload = createPublicationPayload(item);
+  const platforms = [
+    PublicationPlatform.FACEBOOK,
+    PublicationPlatform.INSTAGRAM,
+  ];
+  const nextAttemptAt = new Date();
+  await Promise.all(
+    platforms.map((platform) =>
+      transaction.productPublication.updateMany({
+        where: {
+          menuItemId: item.id,
+          platform,
+          status: ProductPublicationStatus.CANCELLED,
+        },
+        data: {
+          status: ProductPublicationStatus.PENDING,
+          payload,
+          attempts: 0,
+          nextAttemptAt,
+          leaseToken: null,
+          leaseExpiresAt: null,
+          externalContainerId: null,
+          externalPostId: null,
+          publishedAt: null,
+          lastErrorCode: null,
+          lastErrorMessage: null,
+        },
+      }),
+    ),
+  );
   await transaction.productPublication.createMany({
     data: platforms.map((platform) => ({
       menuItemId: item.id,
@@ -59,11 +139,17 @@ async function enqueuePublicProduct(
 
 export const menuRouter = createTRPCRouter({
   registerMenuItem: adminProcedure
-    .input(productInputSchema)
+    .input(
+      productInputSchema.extend({
+        autoPublishToSocial: z.boolean().default(false),
+      }),
+    )
     .mutation(({ ctx, input }) =>
       ctx.db.$transaction(async (transaction) => {
-        const item = await transaction.menuItem.create({ data: input });
-        await enqueuePublicProduct(transaction, item);
+        const item = await transaction.menuItem.create({
+          data: input,
+        });
+        await synchronizeProductPublications(transaction, null, item);
         return item;
       }),
     ),
@@ -85,20 +171,28 @@ export const menuRouter = createTRPCRouter({
           where: { id },
           data,
         });
-        await enqueuePublicProduct(transaction, item);
+        await synchronizeProductPublications(transaction, existing, item);
         return item;
       }),
     ),
-
   toggleAvailability: adminProcedure
     .input(z.object({ id: z.string().cuid(), available: z.boolean() }))
     .mutation(({ ctx, input }) =>
       ctx.db.$transaction(async (transaction) => {
+        const existing = await transaction.menuItem.findUnique({
+          where: { id: input.id },
+        });
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Producto no encontrado",
+          });
+        }
         const item = await transaction.menuItem.update({
           where: { id: input.id },
           data: { available: input.available },
         });
-        await enqueuePublicProduct(transaction, item);
+        await synchronizeProductPublications(transaction, existing, item);
         return item;
       }),
     ),
@@ -112,11 +206,20 @@ export const menuRouter = createTRPCRouter({
     )
     .mutation(({ ctx, input }) =>
       ctx.db.$transaction(async (transaction) => {
+        const existing = await transaction.menuItem.findUnique({
+          where: { id: input.id },
+        });
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Producto no encontrado",
+          });
+        }
         const item = await transaction.menuItem.update({
           where: { id: input.id },
           data: { stock: input.stock },
         });
-        await enqueuePublicProduct(transaction, item);
+        await synchronizeProductPublications(transaction, existing, item);
         return item;
       }),
     ),

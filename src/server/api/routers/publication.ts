@@ -27,7 +27,9 @@ export const publicationRouter = createTRPCRouter({
           externalPostId: true,
           lastErrorCode: true,
           lastErrorMessage: true,
-          menuItem: { select: { name: true } },
+          menuItem: {
+            select: { name: true, autoPublishToSocial: true },
+          },
         },
       }),
     ]);
@@ -107,6 +109,7 @@ export const publicationRouter = createTRPCRouter({
               price: true,
               currency: true,
               image: true,
+              autoPublishToSocial: true,
               available: true,
               stock: true,
             },
@@ -148,6 +151,13 @@ export const publicationRouter = createTRPCRouter({
           code: "PRECONDITION_FAILED",
           message:
             "El producto debe estar disponible y tener stock para publicarse.",
+        });
+      }
+      if (!publication.menuItem.autoPublishToSocial) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Activa la auto-publicación de este producto antes de reintentar.",
         });
       }
 
