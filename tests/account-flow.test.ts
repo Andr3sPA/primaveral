@@ -22,7 +22,11 @@ const { createCaller } = await import("../src/server/api/root");
 const { createOrderInputSchema } = await import(
   "../src/server/api/routers/order"
 );
-const { productInputSchema } = await import("../src/server/api/routers/menu");
+const {
+  productInputSchema,
+  shouldCancelPublications,
+  shouldEnqueuePublicProduct,
+} = await import("../src/server/api/routers/menu");
 
 type TestUser = {
   id: string;
@@ -1042,6 +1046,88 @@ test("product names preserve Spanish accents and ñ through API validation", () 
 
   assert.equal(product.name, "Bolso Raíz y Niño");
   assert.equal(product.name.includes("?"), false);
+});
+
+test("social publication requires product opt-in and an eligible product", () => {
+  const eligible = {
+    autoPublishToSocial: true,
+    available: true,
+    stock: 3,
+  };
+  const optedOut = { ...eligible, autoPublishToSocial: false };
+  const unavailable = { ...eligible, available: false };
+  const outOfStock = { ...eligible, stock: 0 };
+
+  assert.equal(shouldEnqueuePublicProduct(null, eligible), true);
+  assert.equal(shouldEnqueuePublicProduct(null, optedOut), false);
+  assert.equal(shouldEnqueuePublicProduct(null, unavailable), false);
+  assert.equal(shouldEnqueuePublicProduct(null, outOfStock), false);
+});
+
+test("publication is enqueued only on first eligibility or explicit opt-in", () => {
+  const eligible = {
+    autoPublishToSocial: true,
+    available: true,
+    stock: 3,
+  };
+  const unavailable = { ...eligible, available: false };
+  const outOfStock = { ...eligible, stock: 0 };
+  const optedOut = { ...eligible, autoPublishToSocial: false };
+  const existingUnopted = {
+    autoPublishToSocial: false,
+    available: true,
+    stock: 3,
+  };
+
+  assert.equal(
+    shouldEnqueuePublicProduct(existingUnopted, existingUnopted),
+    false,
+  );
+  assert.equal(shouldEnqueuePublicProduct(unavailable, eligible), true);
+  assert.equal(shouldEnqueuePublicProduct(outOfStock, eligible), true);
+  assert.equal(shouldEnqueuePublicProduct(optedOut, eligible), true);
+  assert.equal(shouldEnqueuePublicProduct(eligible, eligible), false);
+  assert.equal(
+    shouldEnqueuePublicProduct(
+      { ...eligible, stock: 2 },
+      { ...eligible, stock: 4 },
+    ),
+    false,
+  );
+  assert.equal(
+    shouldEnqueuePublicProduct(
+      { ...optedOut, stock: 0 },
+      { ...eligible, stock: 0 },
+    ),
+    false,
+  );
+});
+
+test("opt-out or lost eligibility cancels unsent work only", () => {
+  const eligible = {
+    autoPublishToSocial: true,
+    available: true,
+    stock: 3,
+  };
+
+  assert.equal(
+    shouldCancelPublications(eligible, {
+      ...eligible,
+      autoPublishToSocial: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldCancelPublications(eligible, {
+      ...eligible,
+      available: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldCancelPublications(eligible, { ...eligible, stock: 2 }),
+    false,
+  );
 });
 
 test("a Brevo failure does not leave a usable account verification link", async () => {

@@ -31,6 +31,8 @@ function statusLabel(status: string) {
       return "Reintento programado";
     case "PUBLISHED":
       return "Publicado";
+    case "CANCELLED":
+      return "Cancelado";
     default:
       return "Fallido";
   }
@@ -78,9 +80,10 @@ export function SocialPublications() {
         <div>
           <h2 className="text-xl font-medium">Publicación automática</h2>
           <p className="mt-1 text-sm text-stone-500">
-            Los productos visibles en el catálogo se añaden a la cola al crearse
-            o al pasar a estar disponibles. Cada plataforma se controla por
-            separado.
+            La publicación requiere activar la plataforma aquí y marcar el
+            opt-in en cada producto. Solo se encola al crear un producto
+            elegible, al pasar a ser elegible o al activar explícitamente el
+            opt-in; desactivarlo cancela los trabajos aún no procesados.
           </p>
           <p className="mt-2 text-sm text-amber-900">
             Tener las variables configuradas no confirma App Review, permisos,
@@ -204,33 +207,34 @@ export function SocialPublications() {
                       </p>
                     )}
                   </div>
-                  {publication.status === "FAILED" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={retry.isPending}
-                      onClick={() => {
-                        const confirmNoExternalPost =
-                          publication.lastErrorCode === "OUTCOME_UNKNOWN";
-                        if (
-                          confirmNoExternalPost &&
-                          !window.confirm(
-                            "Revisa primero Facebook o Instagram. ¿Confirmas que esta publicación no existe y quieres reintentar?",
-                          )
-                        ) {
-                          return;
-                        }
-                        retry.mutate({
-                          id: publication.id,
-                          confirmNoExternalPost,
-                        });
-                      }}
-                    >
-                      {publication.lastErrorCode === "OUTCOME_UNKNOWN"
-                        ? "Confirmar ausencia y reintentar"
-                        : "Reintentar"}
-                    </Button>
-                  )}
+                  {publication.status === "FAILED" &&
+                    publication.menuItem.autoPublishToSocial && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={retry.isPending}
+                        onClick={() => {
+                          const confirmNoExternalPost =
+                            publication.lastErrorCode === "OUTCOME_UNKNOWN";
+                          if (
+                            confirmNoExternalPost &&
+                            !window.confirm(
+                              "Revisa primero Facebook o Instagram. ¿Confirmas que esta publicación no existe y quieres reintentar?",
+                            )
+                          ) {
+                            return;
+                          }
+                          retry.mutate({
+                            id: publication.id,
+                            confirmNoExternalPost,
+                          });
+                        }}
+                      >
+                        {publication.lastErrorCode === "OUTCOME_UNKNOWN"
+                          ? "Confirmar ausencia y reintentar"
+                          : "Reintentar"}
+                      </Button>
+                    )}
                 </CardContent>
               </Card>
             ))}

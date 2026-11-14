@@ -68,24 +68,25 @@ model VerificationToken {
 
 // Tabla de elementos del menú
 model MenuItem {
-  id              String          @id @default(cuid())
-  name            String
-  description     String?
-  currency        String          @default("$")
-  price           Float
-  available       Boolean         @default(true)
-  category        String          @default("Novedades")
-  sizes           String[]        @default([])
-  colors          String[]        @default([])
-  stock           Int             @default(0)
-  featured        Boolean         @default(false)
-  fulfillmentType FulfillmentType @default(READY_TO_SHIP)
-  leadTimeDays    Int             @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  image           String?
-  orderItems      OrderItem[]
-  publications    ProductPublication[]
+  id                  String               @id @default(cuid())
+  name                String
+  description         String?
+  currency            String               @default("$")
+  price               Float
+  available           Boolean              @default(true)
+  category            String               @default("Novedades")
+  sizes               String[]             @default([])
+  colors              String[]             @default([])
+  stock               Int                  @default(0)
+  featured            Boolean              @default(false)
+  autoPublishToSocial Boolean              @default(false)
+  fulfillmentType     FulfillmentType      @default(READY_TO_SHIP)
+  leadTimeDays        Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  image               String?
+  orderItems          OrderItem[]
+  publications        ProductPublication[]
 }
 
 enum FulfillmentType {
@@ -105,14 +106,15 @@ enum ProductPublicationStatus {
   RETRY_WAIT
   PUBLISHED
   FAILED
+  CANCELLED
 }
 
 model SocialPublishingSettings {
-  id              String   @id @default("primary")
-  facebookEnabled Boolean  @default(false)
-  instagramEnabled Boolean @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default("primary")
+  facebookEnabled  Boolean  @default(false)
+  instagramEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model ProductPublication {
