@@ -92,6 +92,21 @@ publicación esperando casi 24 horas. Para conservar publicaciones oportunas,
 la solución compatible más simple es autorizar/desplegar el cron con Pro o
 Enterprise; no se cambia a diario automáticamente.
 
+Se evaluó disparar el worker con Next.js `after()` desde el Route Handler de
+tRPC (`src/app/api/trpc/[trpc]/route.ts`). Aunque `after()` está disponible en
+la versión instalada y puede ejecutar trabajo post-respuesta, sigue limitado
+por `maxDuration` de la función y no es un scheduler durable. El worker de
+Instagram crea el contenedor y lo deja en `WAITING_FOR_MEDIA` para volver a
+consultarlo cinco minutos después. El Route Handler de tRPC no fija
+`maxDuration`; el máximo actual de Vercel Hobby es 300 segundos, el mismo
+intervalo que espera el worker. Esperar ese periodo dentro de `after()` deja sin
+margen para consultar y publicar el contenedor, y la ejecución puede terminar
+por límite de duración. En Hobby, la recuperación diaria aún podría tardar casi
+24 horas. Por eso `after()` no sustituye al cron de cinco minutos como garantía
+de publicación oportuna. Consulta la documentación de
+[Next.js `after()`](https://nextjs.org/docs/15/app/api-reference/functions/after)
+y los [límites de duración de Vercel](https://vercel.com/docs/functions/limitations#max-duration).
+
 Configura estas variables en el entorno **del servidor** de Vercel Production
 (y en un entorno Meta de prueba independiente si vas a validar Preview):
 
