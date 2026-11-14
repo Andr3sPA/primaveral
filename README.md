@@ -79,11 +79,18 @@ producto elegible, en su primera transición a disponible con stock, o al
 activar explícitamente el opt-in. Las ediciones normales no crean trabajos y
 activar una plataforma no hace backfill de productos sin opt-in. Desactivar el
 opt-in cancela los trabajos que aún no comenzaron; cada plataforma conserva su
-propio estado. La cola se procesa mediante el cron de Vercel cada cinco
-minutos; Vercel ejecuta cron jobs en despliegues de producción, no en Preview.
-El schedule cada cinco minutos requiere un plan Vercel Pro o Enterprise según
-la [documentación de Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing);
-no se debe desplegar este cron en Hobby, cuyo límite de frecuencia es diario.
+propio estado. La cola se procesa mediante una sola entrada de cron de Vercel,
+cada cinco minutos (288 ejecuciones al día); Vercel ejecuta cron jobs en
+despliegues de producción, no en Preview. Esta frecuencia requiere un plan
+Vercel Pro o Enterprise según la
+[documentación de Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing);
+no se debe desplegar este schedule en Hobby, cuyo límite es una ejecución
+diaria. La creación del producto solo guarda el producto y encola sus trabajos
+en la base de datos; no espera a Meta ni al cron, así que el límite de Hobby no
+bloquea el alta. Sin embargo, cambiar el schedule a diario puede dejar una
+publicación esperando casi 24 horas. Para conservar publicaciones oportunas,
+la solución compatible más simple es autorizar/desplegar el cron con Pro o
+Enterprise; no se cambia a diario automáticamente.
 
 Configura estas variables en el entorno **del servidor** de Vercel Production
 (y en un entorno Meta de prueba independiente si vas a validar Preview):
