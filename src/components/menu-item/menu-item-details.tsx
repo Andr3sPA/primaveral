@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Heart, Truck } from "lucide-react";
+import { ArrowRight, Check, Heart, MessageCircle, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ImageViewer from "@/components/menu-item/image-viewer-basic";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { WHATSAPP_CHAT_URL } from "@/lib/social-links";
 
 interface MenuItemDetailsProps {
   id: string;
@@ -241,6 +242,17 @@ function MenuItemDetails({
                 Comprar ahora <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="mt-3 h-12 w-full rounded-full border-[#128c7e] text-[#075e54] hover:bg-[#e8f7f4]"
+            >
+              <a href={WHATSAPP_CHAT_URL} target="_blank" rel="noreferrer">
+                <MessageCircle className="h-4 w-4" />
+                Consultar por WhatsApp
+              </a>
+            </Button>
             <div className="border-border text-muted-foreground mt-7 grid gap-3 border-t pt-6 text-sm sm:grid-cols-2">
               <p className="flex items-center gap-2">
                 <Truck className="text-primary h-4 w-4" /> Envíos a todo el país

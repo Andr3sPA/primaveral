@@ -133,12 +133,21 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
 });
 
 test("the shared footer provides the supplied business contacts and social links", async () => {
-  const [footer, layout] = await Promise.all([
+  const [footer, layout, socialLinks, details] = await Promise.all([
     readSource("src/components/site-footer.tsx"),
     readSource("src/app/layout.tsx"),
+    readSource("src/lib/social-links.ts"),
+    readSource("src/components/menu-item/menu-item-details.tsx"),
   ]);
 
   assert.match(footer, /tel:\+573146589953/);
+  assert.match(footer, /WHATSAPP_CHAT_URL/);
+  assert.match(
+    socialLinks,
+    /https:\/\/api\.whatsapp\.com\/message\/L4SSJI6CVEXJL1\?autoload=1&app_absent=0/,
+  );
+  assert.match(details, /Consultar por WhatsApp/);
+  assert.match(details, /WHATSAPP_CHAT_URL/);
   assert.match(footer, /mailto:primaveralbordados@gmail\.com/);
   assert.match(
     footer,

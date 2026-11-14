@@ -23,6 +23,14 @@ export const env = createEnv({
     BREVO_SENDER_NAME: z.string().min(1).optional(),
     APP_URL: z.string().url().optional(),
     AUTH_URL: z.string().url().optional(),
+    CRON_SECRET: z.string().min(32).optional(),
+    META_PAGE_ID: z.string().min(1).optional(),
+    META_INSTAGRAM_USER_ID: z.string().min(1).optional(),
+    META_PAGE_ACCESS_TOKEN: z.string().min(1).optional(),
+    META_GRAPH_API_VERSION: z
+      .string()
+      .regex(/^v\d+\.\d+$/)
+      .default("v27.0"),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -55,6 +63,11 @@ export const env = createEnv({
     BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME,
     APP_URL: process.env.APP_URL,
     AUTH_URL: process.env.AUTH_URL,
+    CRON_SECRET: process.env.CRON_SECRET,
+    META_PAGE_ID: process.env.META_PAGE_ID,
+    META_INSTAGRAM_USER_ID: process.env.META_INSTAGRAM_USER_ID,
+    META_PAGE_ACCESS_TOKEN: process.env.META_PAGE_ACCESS_TOKEN,
+    META_GRAPH_API_VERSION: process.env.META_GRAPH_API_VERSION,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

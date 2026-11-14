@@ -69,6 +69,72 @@ por Cloudinary en el servidor y solo se guarda en Neon la URL `secure_url`.
 Nunca se suben credenciales al navegador ni se guardan imágenes dentro del
 repositorio. El endpoint acepta únicamente JPG, PNG y WebP de hasta 8 MB.
 
+### Publicación automática en Facebook e Instagram
+
+La publicación automática se configura desde `/admin/social` y permanece
+desactivada hasta que un administrador la habilite por plataforma. Los
+productos disponibles y con stock positivo se agregan a la cola al crearse o
+cuando pasan a estar disponibles; activar la opción no publica en bloque todo
+el inventario existente. Cada plataforma mantiene su propio estado. La cola se
+procesa mediante el cron de Vercel cada cinco minutos; Vercel ejecuta cron jobs
+en despliegues de producción, no en Preview.
+
+Configura estas variables en el entorno **del servidor** de Vercel Production
+(y en un entorno Meta de prueba independiente si vas a validar Preview):
+
+```env
+APP_URL="https://www.tudominio.com"
+CRON_SECRET="secreto-aleatorio-de-al-menos-32-caracteres"
+META_PAGE_ID="id-de-la-pagina"
+META_INSTAGRAM_USER_ID="id-de-la-cuenta-profesional"
+META_PAGE_ACCESS_TOKEN="token-de-acceso-de-la-pagina"
+META_GRAPH_API_VERSION="v27.0"
+```
+
+`META_PAGE_ACCESS_TOKEN` es una credencial; nunca la incluyas en código,
+variables `NEXT_PUBLIC_*`, registros, capturas ni tickets. El proyecto no
+implementa el inicio de sesión/renovación de tokens de Meta: la persona
+administradora debe provisionar un Page access token vigente y renovarlo por el
+proceso autorizado de Meta. La aplicación no promete renovar automáticamente
+los tokens.
+
+La publicación en Pages requiere los permisos y tareas que correspondan a la
+cuenta y al método de inicio de sesión; revisa `pages_manage_posts`,
+`pages_manage_engagement`, `pages_read_engagement` y
+`pages_read_user_engagement`, además de que quien autoriza el token tenga la
+tarea `CREATE_CONTENT` o `MANAGE` en la Página. Para Instagram con Facebook
+Login se requieren una cuenta profesional conectada a esa Página, un Page
+access token, `instagram_basic`, `instagram_content_publish` y
+`pages_read_engagement`. Meta puede requerir `ads_management` y `ads_read` para
+roles asignados mediante Business Manager, Page Publishing Authorization
+(PPA), App Review/Advanced Access o Business Verification. Confirma los
+requisitos vigentes en el panel Meta; probar con una app en Development no
+demuestra acceso de producción.
+
+Referencias: [Pages API - Posts](https://developers.facebook.com/documentation/pages-api/posts),
+[Instagram Content Publishing](https://developers.facebook.com/documentation/instagram-platform/content-publishing)
+y [Graph API changelog](https://developers.facebook.com/documentation/development/graph-api/changelog/).
+La versión configurada por defecto es `v27.0`; revisa el changelog antes de
+cambiarla o actualizarla.
+
+Facebook publica una foto o un post con enlace al producto. Instagram crea un
+media container usando una URL JPEG pública (las imágenes Cloudinary se
+transforman a JPEG), consulta su estado y solo después lo publica. En Instagram,
+el link de WhatsApp del caption puede no ser clicable; el footer de la tienda y
+la página del producto ofrecen el enlace directo al chat:
+`https://api.whatsapp.com/message/L4SSJI6CVEXJL1?autoload=1&app_absent=0`.
+La [referencia del endpoint `media_publish`](https://developers.facebook.com/documentation/instagram-platform/instagram-graph-api/reference/ig-user/media_publish)
+documenta un límite de 50 publicaciones por cuenta en una ventana móvil de 24
+horas; Meta puede rechazar publicaciones por límites, permisos o PPA.
+
+Los intentos quedan persistidos por plataforma. Se reintentan errores
+transitorios de límite de solicitudes; si Meta no confirma el resultado de una
+publicación, el panel la deja en revisión y bloquea el reintento automático para
+evitar duplicados. Un administrador debe revisar la publicación en Meta y
+confirmar que no existe antes de pedir un reintento manual.
+Las credenciales no son necesarias para compilar ni ejecutar las pruebas
+mockeadas.
+
 La credencial de Neon compartida durante la configuración debe considerarse expuesta y rotarse antes de desplegar.
 
 ## Desarrollo y despliegue
