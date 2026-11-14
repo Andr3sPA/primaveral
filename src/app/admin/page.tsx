@@ -6,6 +6,7 @@ import {
   Boxes,
   ChevronRight,
   PackagePlus,
+  Share2,
   ShoppingBag,
 } from "lucide-react";
 import { api } from "@/trpc/react";
@@ -36,6 +37,13 @@ export default function AdminPage() {
       title: "Pedidos",
       description: "Revisa y actualiza pedidos",
       value: `${orders.length} pedidos`,
+    },
+    {
+      href: "/admin/social",
+      icon: Share2,
+      title: "Redes sociales",
+      description: "Publicación automática y estados",
+      value: "Facebook e Instagram",
     },
     {
       href: "/metrics",

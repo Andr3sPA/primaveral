@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Flower2 } from "lucide-react";
+import { WHATSAPP_CHAT_URL } from "@/lib/social-links";
 
 export function SiteFooter() {
   return (
@@ -33,6 +34,14 @@ export function SiteFooter() {
             href="tel:+573146589953"
           >
             Teléfono: 314 658 9953
+          </a>
+          <a
+            className="flex min-h-11 items-center text-[#48235c] underline underline-offset-4"
+            href={WHATSAPP_CHAT_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Escríbenos por WhatsApp
           </a>
           <a
             className="flex min-h-11 items-center break-all text-[#48235c] underline underline-offset-4"

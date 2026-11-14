@@ -85,11 +85,59 @@ model MenuItem {
   updatedAt       DateTime        @updatedAt
   image           String?
   orderItems      OrderItem[]
+  publications    ProductPublication[]
 }
 
 enum FulfillmentType {
   READY_TO_SHIP
   SOURCED_TO_ORDER
+}
+
+enum PublicationPlatform {
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum ProductPublicationStatus {
+  PENDING
+  PROCESSING
+  WAITING_FOR_MEDIA
+  RETRY_WAIT
+  PUBLISHED
+  FAILED
+}
+
+model SocialPublishingSettings {
+  id              String   @id @default("primary")
+  facebookEnabled Boolean  @default(false)
+  instagramEnabled Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProductPublication {
+  id                  String                   @id @default(cuid())
+  menuItemId          String
+  menuItem            MenuItem                 @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  platform            PublicationPlatform
+  status              ProductPublicationStatus @default(PENDING)
+  idempotencyKey      String                   @unique
+  payload             Json
+  attempts            Int                      @default(0)
+  nextAttemptAt       DateTime                 @default(now())
+  leaseToken          String?
+  leaseExpiresAt      DateTime?
+  externalContainerId String?
+  externalPostId      String?
+  publishedAt         DateTime?
+  lastErrorCode       String?
+  lastErrorMessage    String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  @@unique([menuItemId, platform])
+  @@index([status, nextAttemptAt])
+  @@index([leaseExpiresAt])
 }
 
 // Tabla de órdenes de los clientes
