@@ -62,6 +62,13 @@ test("Meta page token prefers META_PAGE_ACCESS_TOKEN and accepts META_ACCESS_TOK
     resolveMetaPageAccessToken({ accessToken: "alias-token" }),
     "alias-token",
   );
+  assert.equal(
+    resolveMetaPageAccessToken({
+      pageAccessToken: "",
+      accessToken: "alias-token",
+    }),
+    "alias-token",
+  );
   assert.equal(resolveMetaPageAccessToken({ pageAccessToken: "" }), undefined);
   assert.equal(resolveMetaPageAccessToken({}), undefined);
 });

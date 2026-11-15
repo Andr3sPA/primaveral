@@ -34,7 +34,9 @@ export function resolveMetaPageAccessToken(values: {
   pageAccessToken?: string;
   accessToken?: string;
 }) {
-  return values.pageAccessToken || values.accessToken;
+  return values.pageAccessToken?.length
+    ? values.pageAccessToken
+    : values.accessToken;
 }
 
 function getAppUrlConfigurationError(appUrl: string, nodeEnv?: string) {
