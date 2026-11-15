@@ -71,7 +71,10 @@ export const env = createEnv({
     CRON_SECRET: process.env.CRON_SECRET,
     META_PAGE_ID: process.env.META_PAGE_ID,
     META_INSTAGRAM_USER_ID: process.env.META_INSTAGRAM_USER_ID,
-    META_PAGE_ACCESS_TOKEN: process.env.META_PAGE_ACCESS_TOKEN,
+    // Prefer the explicit Page token; accept META_ACCESS_TOKEN as alias.
+    // Use || so empty strings also fall through before emptyStringAsUndefined.
+    META_PAGE_ACCESS_TOKEN:
+      process.env.META_PAGE_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN,
     META_APP_ID: process.env.META_APP_ID,
     META_APP_SECRET: process.env.META_APP_SECRET,
     META_USER_TOKEN: process.env.META_USER_TOKEN,

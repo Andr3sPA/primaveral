@@ -111,7 +111,14 @@ y los [límites de duración de Vercel](https://vercel.com/docs/functions/limita
 Configura estas variables en el entorno **del servidor** de Vercel Production
 (y en un entorno Meta de prueba independiente si vas a validar Preview).
 Además, configura `APP_URL` como variable y `CRON_SECRET` como secret en el
-GitHub Environment `prod`, que usa el workflow del worker:
+GitHub Environment `prod`, que usa el workflow del worker. En Vercel
+Production, `CRON_SECRET` tiene que ser exactamente el mismo valor que ese
+secret de GitHub. En Vercel, abre **Project Settings → Environment Variables**,
+añade o actualiza `CRON_SECRET` para el entorno **Production** usando el valor
+ya guardado en **GitHub → Settings → Environments → prod → Environment
+secrets**, guarda y vuelve a desplegar la última versión de Production. No hace
+falta copiar ni mostrar el valor en registros. Si falta en Vercel,
+`GET /api/cron/social-publications` responde 503.
 
 ```env
 APP_URL="https://www.tudominio.com"
@@ -129,23 +136,20 @@ administradora debe provisionar un Page access token vigente y renovarlo por el
 proceso autorizado de Meta. La aplicación no promete renovar automáticamente
 los tokens.
 
-Los nombres `META_APP_ID`, `META_APP_SECRET`, `META_USER_TOKEN`,
-`META_APP_TOKEN` y `META_ACCESS_TOKEN` se reconocen únicamente como variables
-de servidor de la configuración Meta existente. No se usan para publicar ni se
-tratan como alias entre sí: en particular, `META_ACCESS_TOKEN` no se asume como
-Page access token. Las claves identificadas no incluyen
-`META_PAGE_ACCESS_TOKEN`, y ninguna se mapea a ella. El publicador consume
-exclusivamente `META_PAGE_ACCESS_TOKEN`, que debe provisionarse como tal por un
-administrador autorizado. No copies valores desde un `.env` al repositorio.
+Los nombres `META_APP_ID`, `META_APP_SECRET`, `META_USER_TOKEN` y
+`META_APP_TOKEN` se reconocen únicamente como variables de servidor de la
+configuración Meta existente y no se usan para publicar. El publicador consume
+un Page access token via `META_PAGE_ACCESS_TOKEN`. Si esa variable no está
+definida, se acepta `META_ACCESS_TOKEN` como alias compatible del mismo token
+de Página (no como token de usuario ni de aplicación). Prefiere el nombre
+explícito `META_PAGE_ACCESS_TOKEN` en entornos nuevos. No copies valores desde
+un `.env` al repositorio.
 
 El Page ID confirmado en la solicitud original es `1770849856475843`; asígnalo
-a `META_PAGE_ID` en el entorno de servidor, no en código. No se identificó un
-`META_INSTAGRAM_USER_ID` en las variables disponibles. Para resolverlo sin
-exponer tokens, un administrador puede consultar el endpoint oficial de Meta
-`GET /{page-id}?fields=instagram_business_account` con un Page access token
-autorizado en el encabezado Bearer; configura el ID profesional devuelto como
-`META_INSTAGRAM_USER_ID`. La aplicación no realiza esta consulta ni valida o
-intercambia los tokens automáticamente.
+a `META_PAGE_ID` en el entorno de servidor, no en código. La cuenta profesional
+conectada confirmada es `bordadosdecartagoenmedellin`
+(`17841403402083219`); asígnala a `META_INSTAGRAM_USER_ID` en el entorno de
+servidor. La aplicación no consulta ni intercambia los tokens automáticamente.
 
 La publicación en Pages requiere los permisos y tareas que correspondan a la
 cuenta y al método de inicio de sesión; revisa `pages_manage_posts`,

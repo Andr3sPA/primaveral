@@ -26,30 +26,103 @@ export function createPublicationIdempotencyKey(
   return `product:${menuItemId}:${platform}`;
 }
 
-export function getMetaEnvironment(platform: PublicationPlatform) {
+/**
+ * Prefer the explicit Page token name; accept META_ACCESS_TOKEN as a
+ * compatible alias when META_PAGE_ACCESS_TOKEN is unset.
+ */
+export function resolveMetaPageAccessToken(values: {
+  pageAccessToken?: string;
+  accessToken?: string;
+}) {
+  return values.pageAccessToken || values.accessToken;
+}
+
+function getAppUrlConfigurationError(appUrl: string, nodeEnv?: string) {
+  let url: URL;
+  try {
+    url = new URL(appUrl);
+  } catch {
+    return "APP_URL (canonical origin)";
+  }
+
+  if (
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    return "APP_URL (canonical origin)";
+  }
+  if (nodeEnv === "production" && url.protocol !== "https:") {
+    return "APP_URL (HTTPS)";
+  }
+}
+
+export function getMissingMetaEnvironmentKeys(
+  platform: PublicationPlatform,
+  values: {
+    pageId?: string;
+    instagramUserId?: string;
+    pageAccessToken?: string;
+    accessToken?: string;
+    appUrl?: string;
+    cronSecret?: string;
+    nodeEnv?: string;
+  },
+) {
   const missing: string[] = [];
 
-  if (!env.META_PAGE_ID) missing.push("META_PAGE_ID");
-  if (!env.META_PAGE_ACCESS_TOKEN) missing.push("META_PAGE_ACCESS_TOKEN");
-  if (!env.APP_URL) missing.push("APP_URL");
+  if (!values.pageId) missing.push("META_PAGE_ID");
   if (
-    env.APP_URL &&
-    env.NODE_ENV === "production" &&
-    new URL(env.APP_URL).protocol !== "https:"
+    !resolveMetaPageAccessToken({
+      pageAccessToken: values.pageAccessToken,
+      accessToken: values.accessToken,
+    })
   ) {
-    missing.push("APP_URL (HTTPS)");
+    missing.push("META_PAGE_ACCESS_TOKEN");
   }
-  if (!env.CRON_SECRET) missing.push("CRON_SECRET");
-  if (platform === "INSTAGRAM" && !env.META_INSTAGRAM_USER_ID) {
+  if (!values.appUrl) {
+    missing.push("APP_URL");
+  } else {
+    const appUrlError = getAppUrlConfigurationError(
+      values.appUrl,
+      values.nodeEnv,
+    );
+    if (appUrlError) missing.push(appUrlError);
+  }
+  if (!values.cronSecret || values.cronSecret.length < 32) {
+    missing.push("CRON_SECRET");
+  }
+  if (platform === "INSTAGRAM" && !values.instagramUserId) {
     missing.push("META_INSTAGRAM_USER_ID");
   }
+
+  return missing;
+}
+
+export function getMetaEnvironment(platform: PublicationPlatform) {
+  const accessToken = resolveMetaPageAccessToken({
+    pageAccessToken: env.META_PAGE_ACCESS_TOKEN,
+    accessToken: env.META_ACCESS_TOKEN,
+  });
+  const missing = getMissingMetaEnvironmentKeys(platform, {
+    pageId: env.META_PAGE_ID,
+    instagramUserId: env.META_INSTAGRAM_USER_ID,
+    pageAccessToken: env.META_PAGE_ACCESS_TOKEN,
+    accessToken: env.META_ACCESS_TOKEN,
+    appUrl: env.APP_URL,
+    cronSecret: env.CRON_SECRET,
+    nodeEnv: env.NODE_ENV,
+  });
 
   return {
     configured: missing.length === 0,
     missing,
     pageId: env.META_PAGE_ID,
     instagramUserId: env.META_INSTAGRAM_USER_ID,
-    accessToken: env.META_PAGE_ACCESS_TOKEN,
+    accessToken,
     graphApiVersion: env.META_GRAPH_API_VERSION,
   };
 }

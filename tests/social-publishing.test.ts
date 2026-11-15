@@ -5,14 +5,22 @@ process.env.DATABASE_URL =
   "postgresql://test:test@127.0.0.1:5432/primaveral_test";
 process.env.AUTH_SECRET = "test-only-secret";
 process.env.CRON_SECRET = "test-only-cron-secret-with-at-least-32-chars";
+process.env.APP_URL = "https://primaveral.example";
+process.env.META_ACCESS_TOKEN = "test-only-page-token";
+process.env.META_PAGE_ACCESS_TOKEN = "";
+process.env.META_PAGE_ID = "test-page-id";
+process.env.META_INSTAGRAM_USER_ID = "test-instagram-id";
 
 const {
   createInstagramJpegUrl,
   createPublicationCaption,
   createPublicationIdempotencyKey,
+  getMetaEnvironment,
+  getMissingMetaEnvironmentKeys,
   getRetryDelayMs,
   PublicationInputError,
   requirePublicHttpsImageUrl,
+  resolveMetaPageAccessToken,
 } = await import("../src/server/social/publishing");
 const { createMetaPublisher, MetaApiError } = await import(
   "../src/server/social/meta-api"
@@ -39,6 +47,98 @@ test("publication keys are stable per product and platform", () => {
   assert.notEqual(
     createPublicationIdempotencyKey("product-1", "FACEBOOK"),
     createPublicationIdempotencyKey("product-1", "INSTAGRAM"),
+  );
+});
+
+test("Meta page token prefers META_PAGE_ACCESS_TOKEN and accepts META_ACCESS_TOKEN", () => {
+  assert.equal(
+    resolveMetaPageAccessToken({
+      pageAccessToken: "page-token",
+      accessToken: "alias-token",
+    }),
+    "page-token",
+  );
+  assert.equal(
+    resolveMetaPageAccessToken({ accessToken: "alias-token" }),
+    "alias-token",
+  );
+  assert.equal(resolveMetaPageAccessToken({ pageAccessToken: "" }), undefined);
+  assert.equal(resolveMetaPageAccessToken({}), undefined);
+});
+
+test("Meta environment reads META_ACCESS_TOKEN when the Page token name is unset", () => {
+  const configuration = getMetaEnvironment("FACEBOOK");
+  assert.equal(configuration.configured, true);
+  assert.equal(configuration.accessToken, "test-only-page-token");
+});
+
+test("Meta environment requires APP_URL, CRON_SECRET, and a page token alias", () => {
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("FACEBOOK", {
+      pageId: "page-id",
+      accessToken: "alias-token",
+      appUrl: "https://primaveral.example",
+      cronSecret: "x".repeat(32),
+      nodeEnv: "production",
+    }),
+    [],
+  );
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("FACEBOOK", {
+      pageId: "page-id",
+      accessToken: "alias-token",
+      appUrl: "http://primaveral.example",
+      cronSecret: "x".repeat(32),
+      nodeEnv: "production",
+    }),
+    ["APP_URL (HTTPS)"],
+  );
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("FACEBOOK", {
+      pageId: "page-id",
+      accessToken: "alias-token",
+      appUrl: "https://primaveral.example/nested",
+      cronSecret: "x".repeat(32),
+      nodeEnv: "production",
+    }),
+    ["APP_URL (canonical origin)"],
+  );
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("FACEBOOK", {
+      pageId: "page-id",
+      accessToken: "alias-token",
+      appUrl: "not-an-origin",
+      cronSecret: "x".repeat(32),
+      nodeEnv: "production",
+    }),
+    ["APP_URL (canonical origin)"],
+  );
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("INSTAGRAM", {
+      pageId: "page-id",
+      pageAccessToken: "page-token",
+      nodeEnv: "development",
+    }),
+    ["APP_URL", "CRON_SECRET", "META_INSTAGRAM_USER_ID"],
+  );
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("FACEBOOK", {
+      pageId: "page-id",
+      appUrl: "https://primaveral.example",
+      cronSecret: "x".repeat(32),
+      nodeEnv: "production",
+    }),
+    ["META_PAGE_ACCESS_TOKEN"],
+  );
+  assert.deepEqual(
+    getMissingMetaEnvironmentKeys("FACEBOOK", {
+      pageId: "page-id",
+      accessToken: "alias-token",
+      appUrl: "https://primaveral.example",
+      cronSecret: "x".repeat(31),
+      nodeEnv: "production",
+    }),
+    ["CRON_SECRET"],
   );
 });
 
