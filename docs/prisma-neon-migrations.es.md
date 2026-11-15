@@ -6,16 +6,27 @@
 existentes, pero no encuentra historial de migraciones que demuestre cómo se
 crearon. No significa que se deba borrar la base ni volver a crear sus tablas.
 
-El repositorio no tiene una migración inicial. Sus dos migraciones actuales son
-incrementales:
+El repositorio conserva el esquema base en
+`20261107160000_neon_baseline`. Ese DDL se generó desde el esquema leído en
+Neon durante la investigación de este incidente; no contiene filas ni secretos.
+La inspección de solo lectura encontró que la base no tiene
+`_prisma_migrations`, las tablas/enums sociales ni las nuevas columnas de
+producto. También encontró `Order.userId` y `Order.phone` obligatorios y
+ausentes los campos de pedidos invitados, direcciones extendidas y seguimiento.
+
+Las migraciones incrementales posteriores son:
 
 | Migración                                          | Propósito                                                                                                                                                                                                                  |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `20261107170000_guest_orders`                      | Permite pedidos de invitado: hace opcionales `Order.userId` y `Order.phone`, agrega `guestName`/`guestEmail`, agrega municipio/departamento a usuario y pedido, y cambia la FK del usuario para usar `ON DELETE SET NULL`. |
 | `20261107180000_reconcile_profile_address_columns` | Añade municipio/departamento a `User` y `Order` si faltan. Se solapa con las columnas que agrega la primera migración.                                                                                                     |
+| `20261109150000_guest_order_tracking_token`        | Agrega el token único para consultar pedidos de invitado.                                                                                                                                                                  |
+| `20261114170000_social_publishing`                 | Crea las tablas, enums e índices para la cola de publicaciones sociales.                                                                                                                                                   |
+| `20261114180000_product_social_opt_in`             | Agrega el estado `CANCELLED` y el opt-in social anterior por producto.                                                                                                                                                     |
+| `20261115100000_per_platform_social_targets`       | Reemplaza el opt-in único con las opciones independientes de Facebook e Instagram, preservando los opt-ins existentes.                                                                                                     |
 
-La primera migración agrega columnas opcionales y relaja restricciones; no
-elimina filas. También elimina y vuelve a crear la FK de `Order.userId`. La
+Las migraciones de pedidos agregan columnas opcionales y relajan restricciones;
+no eliminan filas. La primera también reemplaza la FK de `Order.userId`. La
 segunda es una reparación idempotente para sus cuatro columnas. Que el SQL sea
 idempotente no demuestra que Neon tenga el esquema correcto; las restricciones,
 columnas y datos deben compararse antes de registrar migraciones como aplicadas.
@@ -46,69 +57,65 @@ logs, tickets o comandos versionados.
    necesario para que el esquema actual alcance el modelo de Prisma:
 
    ```powershell
-   npx prisma migrate diff --from-url $env:DATABASE_URL --to-schema-datamodel prisma/schema.prisma --script
+   npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script
    ```
 
-   Revisa el resultado contra `schema.prisma` y las dos migraciones anteriores.
-   Solo son aceptables aquí las diferencias explicadas por completo por esas
-   dos migraciones. Si falta una tabla, columna requerida, restricción u otro
-   objeto no explicado por ellas, detente y prepara una migración de
-   reconciliación revisada; no lo tapes con `db push` ni marques nada como
-   aplicado. Revisa por separado triggers, políticas RLS u otros objetos que
-   la comparación de Prisma no represente.
+   Revisa el resultado contra `schema.prisma` y todas las migraciones
+   incrementales anteriores. Solo son aceptables las diferencias explicadas
+   por completo por esas migraciones. Si falta una tabla, columna requerida,
+   restricción u otro objeto no explicado por ellas, detente y prepara una
+   migración de reconciliación revisada; no lo tapes con `db push` ni marques
+   nada como aplicado. Revisa por separado triggers, políticas RLS u otros
+   objetos que Prisma no represente.
 
 3. Genera un candidato de baseline a partir del esquema real, no de una
    suposición ni de un esquema histórico que podría no coincidir. Este comando
    solo lee el catálogo y escribe SQL local; no ejecuta el SQL en Neon:
 
    ```powershell
-   npx prisma migrate diff --from-empty --to-url $env:DATABASE_URL --script --output $env:TEMP\primaveral-neon-baseline.sql
+   npx prisma migrate diff --from-empty --to-schema-datasource prisma/schema.prisma --script --output $env:TEMP\primaveral-neon-baseline.sql
    ```
 
    Inspecciona el archivo. Debe contener únicamente DDL del esquema (sin datos,
-   `DROP` inesperados ni credenciales). Usa ese SQL para crear y revisar una
-   migración inicial con un nombre anterior a las dos existentes, por ejemplo
-   `20261107160000_neon_baseline/migration.sql`. Incluye esa migración en el
-   cambio desplegable. La generación no sustituye la revisión ni la prueba.
+   `DROP` inesperados ni credenciales) y debe coincidir con
+   `prisma/migrations/20261107160000_neon_baseline/migration.sql`. Este archivo
+   versionado se generó desde el esquema inspeccionado para este incidente. Si
+   el esquema real cambió desde entonces o la comparación difiere, no lo
+   registres como aplicado: revisa y genera un baseline nuevo. La generación no
+   sustituye la revisión ni la prueba.
 
 4. Valida la secuencia completa en PostgreSQL desechable. Restaura en ese
    servidor una copia reciente de Neon con datos anonimizados, o crea una base
    vacía para probar la migración inicial. En una copia con el esquema real,
    registra el baseline como aplicado y despliega las migraciones pendientes;
    luego compara el resultado con `schema.prisma`. En la base vacía, ejecuta
-   todas las migraciones desde cero. Confirma que las filas de prueba siguen
-   presentes y que columnas, nulabilidad, enums e índices esperados coinciden.
-   No uses Neon de producción como base de prueba.
+   primero el baseline y después todas las migraciones desde cero. Confirma que
+   las filas de prueba siguen presentes y que columnas, nulabilidad, enums e
+   índices esperados coinciden. No uses Neon de producción como base de prueba.
 5. Solo después de que el backup, la comparación y el ensayo hayan sido
    aprobados, y de que el baseline revisado esté en el release, registra en
    Neon el baseline generado para esa misma base:
 
+   `migrate resolve` únicamente registra el historial; no crea ni corrige
+   tablas. Para el esquema de Neon observado durante este incidente, registra
+   solo el baseline como aplicado y deja las migraciones incrementales
+   pendientes para que Prisma aplique sus cambios:
+
    ```powershell
    npx prisma migrate resolve --applied 20261107160000_neon_baseline
+   npm run db:migrate
    ```
 
-   `migrate resolve` únicamente registra el historial; no crea ni corrige
-   tablas. No marques `20261107170000_guest_orders` ni
-   `20261107180000_reconcile_profile_address_columns` como aplicadas salvo que
-   hayas verificado que todos sus efectos están presentes. Solo si la
-   comparación confirma cada efecto completo, registra las migraciones ya
-   reflejadas en Neon:
-
-   ```powershell
-   npx prisma migrate resolve --applied 20261107170000_guest_orders
-   npx prisma migrate resolve --applied 20261107180000_reconcile_profile_address_columns
-   ```
-
-   Si falta algún efecto, no marques esa migración como aplicada. Después de
-   registrar el baseline, ejecuta `npm run db:migrate` para aplicar las
-   migraciones pendientes y vuelve a revisar. No marques como aplicada una
-   migración solo porque algunas de sus columnas ya existan.
+   Ejecuta esos comandos solo tras aprobar backup, comparación y ensayo en
+   staging. Si una nueva comparación demuestra que alguna migración ya está
+   reflejada en Neon, regístrala como aplicada solo después de verificar todos
+   sus efectos; nunca lo hagas porque existan algunas de sus columnas.
 
 6. Verifica el resultado con `npx prisma migrate status` y confirma que no
    quedan diferencias contra `schema.prisma`:
 
    ```powershell
-   npx prisma migrate diff --from-url $env:DATABASE_URL --to-schema-datamodel prisma/schema.prisma --exit-code
+   npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
    ```
 
    Conserva el snapshot, el SQL de baseline y el resultado de la revisión junto
