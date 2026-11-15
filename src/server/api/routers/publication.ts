@@ -7,6 +7,7 @@ import {
   createPublicationPayload,
   getMetaEnvironment,
 } from "@/server/social/publishing";
+import { isProductSocialTargetEnabled } from "@/lib/social-targets";
 
 export const publicationRouter = createTRPCRouter({
   getStatus: adminProcedure.query(async ({ ctx }) => {
@@ -28,7 +29,11 @@ export const publicationRouter = createTRPCRouter({
           lastErrorCode: true,
           lastErrorMessage: true,
           menuItem: {
-            select: { name: true, autoPublishToSocial: true },
+            select: {
+              name: true,
+              autoPublishToFacebook: true,
+              autoPublishToInstagram: true,
+            },
           },
         },
       }),
@@ -109,7 +114,8 @@ export const publicationRouter = createTRPCRouter({
               price: true,
               currency: true,
               image: true,
-              autoPublishToSocial: true,
+              autoPublishToFacebook: true,
+              autoPublishToInstagram: true,
               available: true,
               stock: true,
             },
@@ -153,7 +159,12 @@ export const publicationRouter = createTRPCRouter({
             "El producto debe estar disponible y tener stock para publicarse.",
         });
       }
-      if (!publication.menuItem.autoPublishToSocial) {
+      if (
+        !isProductSocialTargetEnabled(
+          publication.menuItem,
+          publication.platform,
+        )
+      ) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:

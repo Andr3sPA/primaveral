@@ -73,13 +73,14 @@ repositorio. El endpoint acepta únicamente JPG, PNG y WebP de hasta 8 MB.
 
 La publicación automática se configura desde `/admin/social` y permanece
 desactivada hasta que un administrador la habilite por plataforma. Cada
-producto requiere además activar `Auto-publicar en redes sociales` al crearlo o
-editarlo; el valor predeterminado es desactivado. Solo se encola al crear un
-producto elegible, en su primera transición a disponible con stock, o al
-activar explícitamente el opt-in. Las ediciones normales no crean trabajos y
-activar una plataforma no hace backfill de productos sin opt-in. Desactivar el
-opt-in cancela los trabajos que aún no comenzaron; cada plataforma conserva su
-propio estado. La cola se procesa mediante el workflow
+producto se publica siempre en la página web y puede optar por Facebook,
+Instagram, ambas redes o ninguna mediante opciones independientes, desactivadas
+por defecto. Solo se encola al crear un producto elegible, en su primera
+transición a disponible con stock, o al activar explícitamente un canal. Las
+ediciones normales no crean trabajos y activar una plataforma no hace backfill
+de productos sin opt-in. Desactivar un canal cancela solo los trabajos de ese
+canal que aún no comenzaron; cada plataforma conserva su propio estado. La cola
+se procesa mediante el workflow
 `.github/workflows/social-publications.yml` de GitHub Actions, que llama al
 endpoint protegido cada cinco minutos (en los minutos 3, 8, ..., 58 UTC). El
 workflow usa el environment `prod`; debe estar en la rama predeterminada para

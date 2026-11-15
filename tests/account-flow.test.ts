@@ -22,11 +22,8 @@ const { createCaller } = await import("../src/server/api/root");
 const { createOrderInputSchema } = await import(
   "../src/server/api/routers/order"
 );
-const {
-  productInputSchema,
-  shouldCancelPublications,
-  shouldEnqueuePublicProduct,
-} = await import("../src/server/api/routers/menu");
+const { productInputSchema, getPlatformsToCancel, getPlatformsToEnqueue } =
+  await import("../src/server/api/routers/menu");
 
 type TestUser = {
   id: string;
@@ -1048,85 +1045,108 @@ test("product names preserve Spanish accents and ñ through API validation", () 
   assert.equal(product.name.includes("?"), false);
 });
 
-test("social publication requires product opt-in and an eligible product", () => {
-  const eligible = {
-    autoPublishToSocial: true,
+test("social publication targets independently cover all website combinations", () => {
+  const product = {
+    autoPublishToFacebook: false,
+    autoPublishToInstagram: false,
     available: true,
     stock: 3,
   };
-  const optedOut = { ...eligible, autoPublishToSocial: false };
-  const unavailable = { ...eligible, available: false };
-  const outOfStock = { ...eligible, stock: 0 };
+  const combinations = [
+    { name: "website only", targets: {}, expected: [] },
+    {
+      name: "website and Facebook",
+      targets: { autoPublishToFacebook: true },
+      expected: ["FACEBOOK"],
+    },
+    {
+      name: "website and Instagram",
+      targets: { autoPublishToInstagram: true },
+      expected: ["INSTAGRAM"],
+    },
+    {
+      name: "website and both networks",
+      targets: {
+        autoPublishToFacebook: true,
+        autoPublishToInstagram: true,
+      },
+      expected: ["FACEBOOK", "INSTAGRAM"],
+    },
+  ] as const;
 
-  assert.equal(shouldEnqueuePublicProduct(null, eligible), true);
-  assert.equal(shouldEnqueuePublicProduct(null, optedOut), false);
-  assert.equal(shouldEnqueuePublicProduct(null, unavailable), false);
-  assert.equal(shouldEnqueuePublicProduct(null, outOfStock), false);
+  for (const combination of combinations) {
+    assert.deepEqual(
+      getPlatformsToEnqueue(null, { ...product, ...combination.targets }),
+      combination.expected,
+      combination.name,
+    );
+  }
 });
 
-test("publication is enqueued only on first eligibility or explicit opt-in", () => {
+test("social publication queues only newly selected targets and eligible products", () => {
   const eligible = {
-    autoPublishToSocial: true,
+    autoPublishToFacebook: true,
+    autoPublishToInstagram: true,
     available: true,
     stock: 3,
   };
   const unavailable = { ...eligible, available: false };
   const outOfStock = { ...eligible, stock: 0 };
-  const optedOut = { ...eligible, autoPublishToSocial: false };
-  const existingUnopted = {
-    autoPublishToSocial: false,
+  const facebookOnly = {
+    ...eligible,
+    autoPublishToInstagram: false,
+  };
+  const noTargets = {
+    autoPublishToFacebook: false,
+    autoPublishToInstagram: false,
     available: true,
     stock: 3,
   };
 
-  assert.equal(
-    shouldEnqueuePublicProduct(existingUnopted, existingUnopted),
-    false,
-  );
-  assert.equal(shouldEnqueuePublicProduct(unavailable, eligible), true);
-  assert.equal(shouldEnqueuePublicProduct(outOfStock, eligible), true);
-  assert.equal(shouldEnqueuePublicProduct(optedOut, eligible), true);
-  assert.equal(shouldEnqueuePublicProduct(eligible, eligible), false);
-  assert.equal(
-    shouldEnqueuePublicProduct(
-      { ...eligible, stock: 2 },
-      { ...eligible, stock: 4 },
-    ),
-    false,
-  );
-  assert.equal(
-    shouldEnqueuePublicProduct(
-      { ...optedOut, stock: 0 },
-      { ...eligible, stock: 0 },
-    ),
-    false,
+  assert.deepEqual(getPlatformsToEnqueue(noTargets, noTargets), []);
+  assert.deepEqual(getPlatformsToEnqueue(unavailable, eligible), [
+    "FACEBOOK",
+    "INSTAGRAM",
+  ]);
+  assert.deepEqual(getPlatformsToEnqueue(outOfStock, eligible), [
+    "FACEBOOK",
+    "INSTAGRAM",
+  ]);
+  assert.deepEqual(getPlatformsToEnqueue(facebookOnly, eligible), [
+    "INSTAGRAM",
+  ]);
+  assert.deepEqual(getPlatformsToEnqueue(eligible, eligible), []);
+  assert.deepEqual(
+    getPlatformsToEnqueue({ ...eligible, stock: 2 }, { ...eligible, stock: 4 }),
+    [],
   );
 });
 
-test("opt-out or lost eligibility cancels unsent work only", () => {
+test("disabling a channel cancels only its work; lost eligibility cancels selected channels", () => {
   const eligible = {
-    autoPublishToSocial: true,
+    autoPublishToFacebook: true,
+    autoPublishToInstagram: true,
     available: true,
     stock: 3,
   };
 
-  assert.equal(
-    shouldCancelPublications(eligible, {
+  assert.deepEqual(
+    getPlatformsToCancel(eligible, {
       ...eligible,
-      autoPublishToSocial: false,
+      autoPublishToFacebook: false,
     }),
-    true,
+    ["FACEBOOK"],
   );
-  assert.equal(
-    shouldCancelPublications(eligible, {
+  assert.deepEqual(
+    getPlatformsToCancel(eligible, {
       ...eligible,
       available: false,
     }),
-    true,
+    ["FACEBOOK", "INSTAGRAM"],
   );
-  assert.equal(
-    shouldCancelPublications(eligible, { ...eligible, stock: 2 }),
-    false,
+  assert.deepEqual(
+    getPlatformsToCancel(eligible, { ...eligible, stock: 2 }),
+    [],
   );
 });
 
