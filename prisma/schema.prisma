@@ -68,25 +68,26 @@ model VerificationToken {
 
 // Tabla de elementos del menú
 model MenuItem {
-  id                  String               @id @default(cuid())
-  name                String
-  description         String?
-  currency            String               @default("$")
-  price               Float
-  available           Boolean              @default(true)
-  category            String               @default("Novedades")
-  sizes               String[]             @default([])
-  colors              String[]             @default([])
-  stock               Int                  @default(0)
-  featured            Boolean              @default(false)
-  autoPublishToSocial Boolean              @default(false)
-  fulfillmentType     FulfillmentType      @default(READY_TO_SHIP)
-  leadTimeDays        Int                  @default(0)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  image               String?
-  orderItems          OrderItem[]
-  publications        ProductPublication[]
+  id                     String               @id @default(cuid())
+  name                   String
+  description            String?
+  currency               String               @default("$")
+  price                  Float
+  available              Boolean              @default(true)
+  category               String               @default("Novedades")
+  sizes                  String[]             @default([])
+  colors                 String[]             @default([])
+  stock                  Int                  @default(0)
+  featured               Boolean              @default(false)
+  autoPublishToFacebook  Boolean              @default(false)
+  autoPublishToInstagram Boolean              @default(false)
+  fulfillmentType        FulfillmentType      @default(READY_TO_SHIP)
+  leadTimeDays           Int                  @default(0)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  image                  String?
+  orderItems             OrderItem[]
+  publications           ProductPublication[]
 }
 
 enum FulfillmentType {

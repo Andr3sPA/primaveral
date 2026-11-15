@@ -208,7 +208,9 @@ export function SocialPublications() {
                     )}
                   </div>
                   {publication.status === "FAILED" &&
-                    publication.menuItem.autoPublishToSocial && (
+                    (publication.platform === "FACEBOOK"
+                      ? publication.menuItem.autoPublishToFacebook
+                      : publication.menuItem.autoPublishToInstagram) && (
                       <Button
                         type="button"
                         variant="outline"

@@ -16,6 +16,7 @@ import {
   createPublicationIdempotencyKey,
   createPublicationPayload,
 } from "@/server/social/publishing";
+import { isProductSocialTargetEnabled } from "@/lib/social-targets";
 
 export const productInputSchema = z.object({
   name: z
@@ -32,41 +33,50 @@ export const productInputSchema = z.object({
   colors: z.array(z.string().trim().min(1)).max(12).default([]),
   stock: z.number().int().min(0).max(100000).default(0),
   featured: z.boolean().default(false),
-  autoPublishToSocial: z.boolean().optional(),
+  autoPublishToFacebook: z.boolean().optional(),
+  autoPublishToInstagram: z.boolean().optional(),
   fulfillmentType: z.nativeEnum(FulfillmentType).default("READY_TO_SHIP"),
   leadTimeDays: z.number().int().min(0).max(365).default(0),
 });
 
 type ProductPublicationState = Pick<
   MenuItem,
-  "autoPublishToSocial" | "available" | "stock"
+  "autoPublishToFacebook" | "autoPublishToInstagram" | "available" | "stock"
 >;
+
+const publicationPlatforms = [
+  PublicationPlatform.FACEBOOK,
+  PublicationPlatform.INSTAGRAM,
+];
 
 function isEligibleForPublication(product: ProductPublicationState) {
   return product.available && product.stock > 0;
 }
 
-export function shouldEnqueuePublicProduct(
+export function getPlatformsToEnqueue(
   previous: ProductPublicationState | null,
   current: ProductPublicationState,
 ) {
-  if (!current.autoPublishToSocial || !isEligibleForPublication(current)) {
-    return false;
-  }
-  if (!previous) return true;
-  return (
-    (!previous.autoPublishToSocial && current.autoPublishToSocial) ||
-    (!isEligibleForPublication(previous) && isEligibleForPublication(current))
+  if (!isEligibleForPublication(current)) return [];
+
+  return publicationPlatforms.filter(
+    (platform) =>
+      isProductSocialTargetEnabled(current, platform) &&
+      (!previous ||
+        !isEligibleForPublication(previous) ||
+        !isProductSocialTargetEnabled(previous, platform)),
   );
 }
 
-export function shouldCancelPublications(
+export function getPlatformsToCancel(
   previous: ProductPublicationState,
   current: ProductPublicationState,
 ) {
-  return (
-    (previous.autoPublishToSocial && !current.autoPublishToSocial) ||
-    (isEligibleForPublication(previous) && !isEligibleForPublication(current))
+  return publicationPlatforms.filter(
+    (platform) =>
+      isProductSocialTargetEnabled(previous, platform) &&
+      (!isProductSocialTargetEnabled(current, platform) ||
+        !isEligibleForPublication(current)),
   );
 }
 
@@ -75,10 +85,14 @@ async function synchronizeProductPublications(
   previous: ProductPublicationState | null,
   item: MenuItem,
 ) {
-  if (previous && shouldCancelPublications(previous, item)) {
+  const platformsToCancel = previous
+    ? getPlatformsToCancel(previous, item)
+    : [];
+  if (platformsToCancel.length > 0) {
     await transaction.productPublication.updateMany({
       where: {
         menuItemId: item.id,
+        platform: { in: platformsToCancel },
         status: {
           in: [
             ProductPublicationStatus.PENDING,
@@ -94,13 +108,10 @@ async function synchronizeProductPublications(
       },
     });
   }
-  if (!shouldEnqueuePublicProduct(previous, item)) return;
+  const platforms = getPlatformsToEnqueue(previous, item);
+  if (platforms.length === 0) return;
 
   const payload = createPublicationPayload(item);
-  const platforms = [
-    PublicationPlatform.FACEBOOK,
-    PublicationPlatform.INSTAGRAM,
-  ];
   const nextAttemptAt = new Date();
   await Promise.all(
     platforms.map((platform) =>
@@ -141,7 +152,8 @@ export const menuRouter = createTRPCRouter({
   registerMenuItem: adminProcedure
     .input(
       productInputSchema.extend({
-        autoPublishToSocial: z.boolean().default(false),
+        autoPublishToFacebook: z.boolean().default(false),
+        autoPublishToInstagram: z.boolean().default(false),
       }),
     )
     .mutation(({ ctx, input }) =>
