@@ -1,0 +1,59 @@
+name: Social publication queue
+
+on:
+  schedule:
+    - cron: "3-58/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: social-publications
+  cancel-in-progress: false
+
+jobs:
+  process:
+    name: Process due publications
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 2
+    steps:
+      - name: Validate configuration
+        shell: bash
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APP_URL" ]]; then
+            echo "::error::Set APP_URL in the prod environment variables."
+            exit 1
+          fi
+          case "$APP_URL" in
+            https://*) ;;
+            *)
+              echo "::error::APP_URL must use HTTPS."
+              exit 1
+              ;;
+          esac
+          if [[ -z "$CRON_SECRET" ]]; then
+            echo "::error::Set CRON_SECRET in the prod environment secrets."
+            exit 1
+          fi
+
+      - name: Process due social publications
+        shell: bash
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          app_url="${APP_URL%/}"
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --max-time 70 \
+            --request GET \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "${app_url}/api/cron/social-publications"

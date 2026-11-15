@@ -79,18 +79,18 @@ producto elegible, en su primera transición a disponible con stock, o al
 activar explícitamente el opt-in. Las ediciones normales no crean trabajos y
 activar una plataforma no hace backfill de productos sin opt-in. Desactivar el
 opt-in cancela los trabajos que aún no comenzaron; cada plataforma conserva su
-propio estado. La cola se procesa mediante una sola entrada de cron de Vercel,
-cada cinco minutos (288 ejecuciones al día); Vercel ejecuta cron jobs en
-despliegues de producción, no en Preview. Esta frecuencia requiere un plan
-Vercel Pro o Enterprise según la
-[documentación de Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing);
-no se debe desplegar este schedule en Hobby, cuyo límite es una ejecución
-diaria. La creación del producto solo guarda el producto y encola sus trabajos
-en la base de datos; no espera a Meta ni al cron, así que el límite de Hobby no
-bloquea el alta. Sin embargo, cambiar el schedule a diario puede dejar una
-publicación esperando casi 24 horas. Para conservar publicaciones oportunas,
-la solución compatible más simple es autorizar/desplegar el cron con Pro o
-Enterprise; no se cambia a diario automáticamente.
+propio estado. La cola se procesa mediante el workflow
+`.github/workflows/social-publications.yml` de GitHub Actions, que llama al
+endpoint protegido cada cinco minutos (en los minutos 3, 8, ..., 58 UTC). El
+workflow usa el environment `prod`; debe estar en la rama predeterminada para
+que se ejecuten sus schedules. GitHub puede retrasar ejecuciones programadas
+durante periodos de alta carga, por lo que no se garantiza una hora exacta.
+Esto evita el límite de cron diario de Vercel Hobby; si se vuelve a configurar
+este schedule como Vercel Cron, se requiere un plan Pro o Enterprise según la
+[documentación de Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing).
+La creación del producto solo guarda el producto y encola sus trabajos en la
+base de datos; no espera a Meta ni al worker. La ejecución manual de
+`workflow_dispatch` también procesa publicaciones reales.
 
 Se evaluó disparar el worker con Next.js `after()` desde el Route Handler de
 tRPC (`src/app/api/trpc/[trpc]/route.ts`). Aunque `after()` está disponible en
@@ -101,14 +101,16 @@ consultarlo cinco minutos después. El Route Handler de tRPC no fija
 `maxDuration`; el máximo actual de Vercel Hobby es 300 segundos, el mismo
 intervalo que espera el worker. Esperar ese periodo dentro de `after()` deja sin
 margen para consultar y publicar el contenedor, y la ejecución puede terminar
-por límite de duración. En Hobby, la recuperación diaria aún podría tardar casi
-24 horas. Por eso `after()` no sustituye al cron de cinco minutos como garantía
-de publicación oportuna. Consulta la documentación de
+por límite de duración. Por eso `after()` no sustituye al workflow programado
+de GitHub Actions como mecanismo para recuperar la cola en ejecuciones
+posteriores. Consulta la documentación de
 [Next.js `after()`](https://nextjs.org/docs/15/app/api-reference/functions/after)
 y los [límites de duración de Vercel](https://vercel.com/docs/functions/limitations#max-duration).
 
 Configura estas variables en el entorno **del servidor** de Vercel Production
-(y en un entorno Meta de prueba independiente si vas a validar Preview):
+(y en un entorno Meta de prueba independiente si vas a validar Preview).
+Además, configura `APP_URL` como variable y `CRON_SECRET` como secret en el
+GitHub Environment `prod`, que usa el workflow del worker:
 
 ```env
 APP_URL="https://www.tudominio.com"
