@@ -212,7 +212,7 @@ export default function EditMenuItemDialog({
               </select>
             </div>
             <div>
-              <Label htmlFor="leadTimeDays">Días estimados</Label>
+              <Label htmlFor="leadTimeDays">Días estimados de entrega</Label>
               <Input
                 id="leadTimeDays"
                 type="number"
@@ -222,6 +222,9 @@ export default function EditMenuItemDialog({
                 onChange={(e) => setLeadTimeDays(e.target.value)}
                 required
               />
+              <p className="text-muted-foreground mt-1 text-xs">
+                Días calendario; puedes indicar 30 días o más, hasta 365.
+              </p>
             </div>
           </div>
           <div className="flex justify-end gap-2">

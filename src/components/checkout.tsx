@@ -36,7 +36,8 @@ const schema = z.object({
   municipality: z.string().trim().min(2, "Indica el municipio").max(100),
   department: z.string().trim().min(2, "Indica el departamento").max(100),
   phone: z.string().trim().max(30).optional(),
-  paymentMethod: z.literal("cash"),
+  confirmLivePayment: z.boolean(),
+  paymentMethod: z.enum(["cash", "wompi"]),
 });
 
 type CheckoutValues = z.infer<typeof schema>;
@@ -63,12 +64,14 @@ export function Checkout() {
       municipality: "",
       department: "",
       phone: "",
+      confirmLivePayment: false,
       paymentMethod: "cash",
     },
   });
   const profileQuery = api.user.getProfile.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const wompiAvailability = api.order.getWompiAvailability.useQuery();
   const [addressMode, setAddressMode] = useState<AddressMode>("new");
   const [saveNewAddress, setSaveNewAddress] = useState(false);
   const createOrder = api.order.createNew.useMutation({
@@ -91,6 +94,7 @@ export function Checkout() {
       municipality: profile.municipality ?? "",
       department: profile.department ?? "",
       phone: profile.phone ?? "",
+      confirmLivePayment: false,
       paymentMethod: "cash",
     });
     setAddressMode(hasSavedAddress ? "saved" : "new");
@@ -114,6 +118,19 @@ export function Checkout() {
   };
 
   const onSubmit = (values: CheckoutValues) => {
+    if (
+      values.paymentMethod === "wompi" &&
+      wompiAvailability.data?.available &&
+      wompiAvailability.data.mode === "production" &&
+      !values.confirmLivePayment
+    ) {
+      form.setError("confirmLivePayment", {
+        type: "required",
+        message:
+          "Confirma que autorizas un cobro real para pagar en Producción.",
+      });
+      return;
+    }
     if (!isAuthenticated && !values.email) {
       setError("email", {
         type: "required",
@@ -142,6 +159,7 @@ export function Checkout() {
           ? values.name
           : undefined,
       saveAddress: isAuthenticated && addressMode === "new" && saveNewAddress,
+      confirmLivePayment: values.confirmLivePayment,
       paymentMethod: values.paymentMethod,
     });
   };
@@ -155,18 +173,68 @@ export function Checkout() {
   }
 
   if (createOrder.isSuccess) {
+    const checkout = createOrder.data.wompiCheckout;
     return (
       <main className="botanical-page mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-700">
           <LockKeyhole />
         </div>
         <h1 className="font-display mt-6 text-3xl font-semibold text-[#48235c]">
-          ¡Pedido recibido!
+          {checkout ? "Pedido listo para pagar" : "¡Pedido recibido!"}
         </h1>
         <p className="mt-3 text-stone-500">
-          Te contactaremos para confirmar los detalles y el pago. Gracias por
-          elegir piezas hechas con calma.
+          {checkout
+            ? checkout.mode === "production"
+              ? "El pedido quedará pendiente hasta la confirmación de Wompi. Al continuar se realizará un cobro real."
+              : "El pedido quedará pendiente hasta que Wompi confirme el pago. Continúa al checkout seguro de Sandbox para probarlo."
+            : "Te contactaremos para confirmar los detalles y el pago. Gracias por elegir piezas hechas con calma."}
         </p>
+        {checkout && (
+          <form
+            action={checkout.action}
+            method="GET"
+            className="mt-6 rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4 text-left"
+          >
+            <input type="hidden" name="public-key" value={checkout.publicKey} />
+            <input type="hidden" name="currency" value={checkout.currency} />
+            <input
+              type="hidden"
+              name="amount-in-cents"
+              value={checkout.amountInCents}
+            />
+            <input type="hidden" name="reference" value={checkout.reference} />
+            <input
+              type="hidden"
+              name="signature:integrity"
+              value={checkout.integritySignature}
+            />
+            <input
+              type="hidden"
+              name="redirect-url"
+              value={checkout.redirectUrl}
+            />
+            <input
+              type="hidden"
+              name="customer-data:email"
+              value={checkout.customerEmail}
+            />
+            <input
+              type="hidden"
+              name="customer-data:full-name"
+              value={checkout.customerName}
+            />
+            <p className="text-sm leading-6 text-[#514060]">
+              {checkout.mode === "production"
+                ? "Se abrirá el checkout seguro de Wompi Producción y se cobrará dinero real."
+                : "Se abrirá el checkout hospedado de Wompi Sandbox. No ingreses datos de tarjetas reales."}
+            </p>
+            <Button type="submit" size="lg" className="mt-4 min-h-12 w-full">
+              {checkout.mode === "production"
+                ? "Ir al checkout de Wompi"
+                : "Ir al checkout de Wompi Sandbox"}
+            </Button>
+          </form>
+        )}
         {createOrder.data?.trackingUrl && (
           <div className="mt-6 space-y-3 rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4 text-left">
             <p className="font-medium text-[#35203f]">
@@ -387,18 +455,98 @@ export function Checkout() {
                     Guardar esta dirección en mi perfil
                   </label>
                 )}
-                <div className="rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4">
-                  <p className="text-base font-semibold text-[#35203f]">
-                    Forma de pago
-                  </p>
-                  <p className="mt-2 flex items-center gap-2 text-[#514060]">
-                    <WalletCards
-                      className="h-5 w-5 shrink-0 text-[#684281]"
-                      aria-hidden="true"
-                    />
-                    Pago al recibir el pedido
-                  </p>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem className="rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4">
+                      <FormLabel className="text-base font-semibold text-[#35203f]">
+                        Forma de pago
+                      </FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="mt-3 grid gap-3"
+                        >
+                          <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-[#d9c9df] bg-white p-3">
+                            <RadioGroupItem value="cash" />
+                            <WalletCards
+                              className="h-5 w-5 shrink-0 text-[#684281]"
+                              aria-hidden="true"
+                            />
+                            <span className="text-sm font-medium">
+                              Pago al recibir el pedido
+                            </span>
+                          </label>
+                          <label
+                            className={`flex min-h-12 items-center gap-3 rounded-lg border border-[#d9c9df] bg-white p-3 ${
+                              wompiAvailability.data?.available
+                                ? "cursor-pointer"
+                                : "cursor-not-allowed opacity-60"
+                            }`}
+                          >
+                            <RadioGroupItem
+                              value="wompi"
+                              disabled={!wompiAvailability.data?.available}
+                            />
+                            <span className="text-sm font-medium">
+                              {wompiAvailability.data?.available
+                                ? wompiAvailability.data.mode === "production"
+                                  ? "Tarjeta o PSE con Wompi Producción"
+                                  : "Tarjeta o PSE con Wompi Sandbox (pruebas)"
+                                : "Tarjeta o PSE con Wompi"}
+                            </span>
+                          </label>
+                        </RadioGroup>
+                      </FormControl>
+                      {wompiAvailability.data?.available &&
+                        wompiAvailability.data.mode === "production" && (
+                          <p
+                            role="alert"
+                            className="rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-900"
+                          >
+                            Estás en Producción: continuar inicia un pago con
+                            dinero real. Para probar sin cargos, usa una Preview
+                            configurada con llaves Sandbox.
+                          </p>
+                        )}
+                      {form.watch("paymentMethod") === "wompi" &&
+                        wompiAvailability.data?.available &&
+                        wompiAvailability.data.mode === "production" && (
+                          <label className="flex items-start gap-3 text-sm leading-6 text-[#35203f]">
+                            <input
+                              type="checkbox"
+                              {...form.register("confirmLivePayment")}
+                              className="mt-1 h-4 w-4 shrink-0 rounded border-stone-300"
+                            />
+                            Confirmo que este pago es real y autorizo el cobro
+                            del monto mostrado.
+                          </label>
+                        )}
+                      {form.formState.errors.confirmLivePayment && (
+                        <p role="alert" className="text-sm text-red-700">
+                          {form.formState.errors.confirmLivePayment.message}
+                        </p>
+                      )}
+                      {!wompiAvailability.data?.available && (
+                        <p className="text-sm leading-6 text-[#514060]">
+                          Wompi no está habilitado:{" "}
+                          {wompiAvailability.data?.reason ??
+                            "no se pudo revisar la configuración"}{" "}
+                          Pago al recibir sigue disponible.
+                        </p>
+                      )}
+                      {wompiAvailability.error && (
+                        <p role="alert" className="text-sm text-red-700">
+                          No se pudo verificar la disponibilidad de Wompi .
+                          Recarga la página antes de elegir el método.
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 {profileQuery.error && (
                   <p
                     role="alert"
@@ -468,14 +616,14 @@ export function Checkout() {
                         {item.prefix}
                         {item.price.toFixed(2)}
                       </p>
-                      {item.fulfillmentType === "SOURCED_TO_ORDER" &&
-                        item.leadTimeDays &&
-                        item.leadTimeDays > 0 && (
-                          <p className="mt-1 text-sm text-[#514060]">
-                            Preparación estimada: {item.leadTimeDays}{" "}
-                            {item.leadTimeDays === 1 ? "día" : "días"}
-                          </p>
-                        )}
+                      {item.fulfillmentType === "SOURCED_TO_ORDER" && (
+                        <p className="mt-1 text-sm text-[#514060]">
+                          Entrega estimada:{" "}
+                          {item.leadTimeDays && item.leadTimeDays > 0
+                            ? `${item.leadTimeDays} ${item.leadTimeDays === 1 ? "día" : "días"}`
+                            : "por confirmar"}
+                        </p>
+                      )}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <button
                           type="button"

@@ -1,10 +1,13 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Package } from "lucide-react";
+import type { FulfillmentType } from "@prisma/client";
 
 interface Item {
   id: string;
   quantity: number;
   subtotal: number;
+  fulfillmentType: FulfillmentType;
+  leadTimeDays: number;
   menuItem: { name: string };
 }
 
@@ -25,6 +28,13 @@ export default function OrderItemsList({ items }: { items: Item[] }) {
                 <p className="text-muted-foreground text-sm">
                   Cantidad: {item.quantity}
                 </p>
+                {item.fulfillmentType === "SOURCED_TO_ORDER" &&
+                  item.leadTimeDays > 0 && (
+                    <p className="text-muted-foreground text-sm">
+                      Entrega estimada: {item.leadTimeDays}{" "}
+                      {item.leadTimeDays === 1 ? "día" : "días"}
+                    </p>
+                  )}
               </div>
             </div>
             <div className="text-right">

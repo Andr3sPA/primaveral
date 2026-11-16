@@ -122,16 +122,15 @@ export default function ShoppingCart() {
                                         "Prenda de nuestra colección"}
                                     </p>
                                     {item.fulfillmentType ===
-                                      "SOURCED_TO_ORDER" &&
-                                      item.leadTimeDays &&
-                                      item.leadTimeDays > 0 && (
-                                        <p className="mt-1 text-xs text-amber-700">
-                                          Preparación: {item.leadTimeDays}{" "}
-                                          {item.leadTimeDays === 1
-                                            ? "día"
-                                            : "días"}
-                                        </p>
-                                      )}
+                                      "SOURCED_TO_ORDER" && (
+                                      <p className="mt-1 text-xs text-amber-700">
+                                        Entrega estimada:{" "}
+                                        {item.leadTimeDays &&
+                                        item.leadTimeDays > 0
+                                          ? `${item.leadTimeDays} ${item.leadTimeDays === 1 ? "día" : "días"}`
+                                          : "por confirmar"}
+                                      </p>
+                                    )}
                                   </div>
                                   <div className="flex flex-1 items-end justify-between text-sm">
                                     <p className="text-gray-500">

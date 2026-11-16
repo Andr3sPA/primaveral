@@ -36,6 +36,12 @@ export const env = createEnv({
       .string()
       .regex(/^v\d+\.\d+$/)
       .default("v27.0"),
+    WOMPI_LLAVE_PUBLICA: z.string().min(1).optional(),
+    WOMPI_LLAVE_PRIVADA: z.string().min(1).optional(),
+    WOMPI_EVENTOS: z.string().min(1).optional(),
+    WOMPI_INTEGRIDAD: z.string().min(1).optional(),
+    WOMPI_REDIRECT_URL: z.string().url().optional(),
+    WOMPI_LIVE_PAYMENTS_ENABLED: z.enum(["true", "false"]).optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -81,6 +87,12 @@ export const env = createEnv({
     META_APP_TOKEN: process.env.META_APP_TOKEN,
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
     META_GRAPH_API_VERSION: process.env.META_GRAPH_API_VERSION,
+    WOMPI_LLAVE_PUBLICA: process.env.WOMPI_LLAVE_PUBLICA,
+    WOMPI_LLAVE_PRIVADA: process.env.WOMPI_LLAVE_PRIVADA,
+    WOMPI_EVENTOS: process.env.WOMPI_EVENTOS,
+    WOMPI_INTEGRIDAD: process.env.WOMPI_INTEGRIDAD,
+    WOMPI_REDIRECT_URL: process.env.WOMPI_REDIRECT_URL,
+    WOMPI_LIVE_PAYMENTS_ENABLED: process.env.WOMPI_LIVE_PAYMENTS_ENABLED,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

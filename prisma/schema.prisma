@@ -174,24 +174,31 @@ enum OrderStatus {
 
 // Detalles de cada ítem pedido
 model OrderItem {
-  id         String   @id @default(cuid())
-  orderId    String
-  order      Order    @relation(fields: [orderId], references: [id])
-  menuItemId String
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
-  quantity   Int
-  subtotal   Float
+  id              String          @id @default(cuid())
+  orderId         String
+  order           Order           @relation(fields: [orderId], references: [id])
+  menuItemId      String
+  menuItem        MenuItem        @relation(fields: [menuItemId], references: [id])
+  quantity        Int
+  subtotal        Float
+  fulfillmentType FulfillmentType @default(READY_TO_SHIP)
+  leadTimeDays    Int             @default(0)
 }
 
 // Información de pagos
 model Payment {
-  id        String   @id @default(cuid())
-  orderId   String   @unique
-  order     Order    @relation(fields: [orderId], references: [id])
-  method    String // Ej: CASH, CARD
-  status    String // Ej: PAID, PENDING, FAILED
-  amount    Float
-  createdAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  orderId            String   @unique
+  order              Order    @relation(fields: [orderId], references: [id])
+  method             String // Ej: cash, WOMPI_SANDBOX
+  status             String // Ej: PAID, PENDING, FAILED
+  amount             Float
+  statusToken        String?  @unique
+  wompiEnvironment   String?
+  wompiTransactionId String?
+  createdAt          DateTime @default(now())
+
+  @@unique([wompiEnvironment, wompiTransactionId])
 }
 
 // Inventario de insumos

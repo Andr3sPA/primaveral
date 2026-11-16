@@ -128,6 +128,20 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                 <p className="text-lg font-semibold">
                   Total: ${orderDetails.total.toFixed(2)}
                 </p>
+                <p className="text-sm">
+                  Pago:{" "}
+                  {orderDetails.payment?.method === "WOMPI_SANDBOX"
+                    ? "Wompi Sandbox"
+                    : orderDetails.payment?.method === "WOMPI_PRODUCTION"
+                      ? "Wompi Producción"
+                      : "Pago al recibir"}
+                  {" · "}
+                  {orderDetails.payment?.status === "PAID"
+                    ? "Aprobado"
+                    : orderDetails.payment?.status === "FAILED"
+                      ? "No aprobado"
+                      : "Pendiente"}
+                </p>
                 <p className="text-muted-foreground text-sm">
                   Fecha: {new Date(orderDetails.createdAt).toLocaleString()}
                 </p>

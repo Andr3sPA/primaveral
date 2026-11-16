@@ -48,7 +48,18 @@ function createMemoryDatabase(
     token: string;
     expires: Date;
   }> = [];
-  const products = new Map([
+  type TestProduct = {
+    id: string;
+    name: string;
+    image: string;
+    currency: string;
+    price: number;
+    stock: number;
+    available: boolean;
+    fulfillmentType: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
+    leadTimeDays: number;
+  };
+  const products = new Map<string, TestProduct>([
     [
       "c123456789012345678901234",
       {
@@ -59,6 +70,8 @@ function createMemoryDatabase(
         price: 25,
         stock: 5,
         available: true,
+        fulfillmentType: "READY_TO_SHIP",
+        leadTimeDays: 0,
       },
     ],
   ]);
@@ -279,6 +292,8 @@ function createMemoryDatabase(
             menuItemId: string;
             quantity: number;
             subtotal: number;
+            fulfillmentType: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
+            leadTimeDays: number;
           }>;
         };
         const order = {
@@ -290,6 +305,8 @@ function createMemoryDatabase(
             id: `${orders.length + 1}-${item.menuItemId}`,
             quantity: item.quantity,
             subtotal: item.subtotal,
+            fulfillmentType: item.fulfillmentType,
+            leadTimeDays: item.leadTimeDays,
             menuItem: {
               id: item.menuItemId,
               name: products.get(item.menuItemId)?.name ?? "Producto",
@@ -364,6 +381,7 @@ function createMemoryDatabase(
     users,
     verificationTokens,
     orders,
+    products,
   };
 }
 
@@ -441,8 +459,28 @@ test("account email links use only the explicit canonical APP_URL", () => {
   }
 });
 
+test("product delivery estimates accept 30+ calendar days up to the configured limit", () => {
+  const product = productInputSchema.parse({
+    name: "Prenda por encargo",
+    price: 25000,
+    fulfillmentType: "SOURCED_TO_ORDER",
+    leadTimeDays: 45,
+  });
+
+  assert.equal(product.leadTimeDays, 45);
+  assert.equal(
+    productInputSchema.safeParse({
+      name: "Plazo fuera del límite",
+      price: 25000,
+      fulfillmentType: "SOURCED_TO_ORDER",
+      leadTimeDays: 366,
+    }).success,
+    false,
+  );
+});
+
 test("the complete account and checkout flow works with an in-memory database and mocked mail", async () => {
-  const { database, users, verificationTokens, orders } =
+  const { database, users, verificationTokens, orders, products } =
     createMemoryDatabase();
   const sentEmails: Array<{
     htmlContent: string;
@@ -647,6 +685,9 @@ test("the complete account and checkout flow works with an in-memory database an
       department: "Cundinamarca",
       paymentMethod: "cash" as const,
     };
+    const sourcedProduct = products.get("c123456789012345678901234")!;
+    sourcedProduct.fulfillmentType = "SOURCED_TO_ORDER";
+    sourcedProduct.leadTimeDays = 45;
     await assert.rejects(
       caller.order.createNew(orderInput),
       /correo electrónico es obligatorio/i,
@@ -659,6 +700,20 @@ test("the complete account and checkout flow works with an in-memory database an
     });
     assert.equal(guestOrder.guestEmail, "guest@example.test");
     assert.equal(guestOrder.userId, undefined);
+    const guestOrderItems = orders[0]?.orderItems as
+      | Array<{
+          fulfillmentType: string;
+          leadTimeDays: number;
+        }>
+      | undefined;
+    assert.equal(guestOrderItems?.[0]?.leadTimeDays, 45);
+    assert.equal(guestOrderItems?.[0]?.fulfillmentType, "SOURCED_TO_ORDER");
+    sourcedProduct.leadTimeDays = 60;
+    assert.equal(
+      guestOrderItems?.[0]?.leadTimeDays,
+      45,
+      "delivery estimate is preserved from the time of purchase",
+    );
     const registeredOrder = await accountCaller.order.createNew({
       ...orderInput,
       saveAddress: true,
@@ -687,6 +742,10 @@ test("the complete account and checkout flow works with an in-memory database an
     assert.match(guestOrderNotification.textContent, /Bogotá/);
     assert.match(guestOrderNotification.textContent, /Cundinamarca/);
     assert.match(guestOrderNotification.textContent, /1 × Blusa/);
+    assert.match(
+      guestOrderNotification.textContent,
+      /entrega estimada: 45 días/,
+    );
     assert.match(guestOrderNotification.textContent, /Total: \$25,00/);
     assert.match(guestOrderNotification.htmlContent, /<h1[^>]*>Nuevo pedido/);
     const guestTrackingUrl = new URL(
@@ -713,6 +772,7 @@ test("the complete account and checkout flow works with an in-memory database an
     });
     assert.equal(publicTracking?.id, guestOrder.id);
     assert.equal(publicTracking?.orderItems[0]?.menuItem.name, "Blusa");
+    assert.equal(publicTracking?.orderItems[0]?.leadTimeDays, 45);
     assert.equal(
       "guestEmail" in (publicTracking ?? {}),
       false,
