@@ -15,6 +15,7 @@ import OrderStatusBadge from "./OrderStatusBadge";
 import OrderUserCell from "./OrderUserCell";
 import type { OrderStatus } from "@prisma/client";
 import { toast } from "sonner";
+import { formatCOP } from "@/lib/format-currency";
 
 interface Order {
   id: string;
@@ -190,9 +191,9 @@ export function OrdersTable() {
         cell: ({ cell }) => {
           const total = cell.getValue<Order["total"]>();
           return (
-            <div className="flex items-center gap-1 font-medium">
-              <DollarSign className="size-4" />
-              {total.toFixed(2)}
+            <div className="flex items-center gap-1 font-medium tabular-nums">
+              <DollarSign className="size-4" aria-hidden="true" />
+              {formatCOP(total)}
             </div>
           );
         },

@@ -4,10 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Flower2, Search, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/react";
 import { useCart } from "@/contexts/CartContext";
 import { normalizeSearchText } from "@/lib/normalize-search-text.js";
+import { formatCOP } from "@/lib/format-currency";
 
 type Product = RouterOutputs["menu"]["getPublicMenuItems"][number];
 
@@ -34,14 +36,9 @@ function ProductCard({ item }: { item: Product }) {
               Primaveral
             </div>
           )}
-          {item.featured && (
-            <span className="absolute top-4 left-4 rounded-full bg-[#f7e7a9] px-3 py-1 text-base font-medium text-[#35203f]">
-              Favorito
-            </span>
-          )}
           {item.fulfillmentType === "SOURCED_TO_ORDER" && (
-            <span className="absolute right-4 bottom-4 rounded-full bg-[#fffdf8]/95 px-3 py-1 text-base font-medium text-[#514060]">
-              Por encargo
+            <span className="text-store-ink absolute right-3 bottom-3 rounded-lg bg-white px-3 py-2 text-base font-semibold">
+              Preparación por encargo
             </span>
           )}
         </div>
@@ -52,15 +49,14 @@ function ProductCard({ item }: { item: Product }) {
             </h3>
             <p className="mt-1 text-base text-[#514060]">{item.category}</p>
           </div>
-          <p className="shrink-0 text-right font-semibold text-[#35203f]">
-            {item.currency}
-            {item.price.toFixed(2)}
+          <p className="store-price text-store-ink shrink-0 text-right font-semibold">
+            {formatCOP(item.price)}
           </p>
         </div>
       </Link>
       <button
         className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#6f4a7c] px-4 py-2.5 text-base font-medium text-[#48235c] transition hover:bg-[#48235c] hover:text-white"
-        onClick={() =>
+        onClick={() => {
           addItem({
             id: item.id,
             title: item.name,
@@ -68,8 +64,9 @@ function ProductCard({ item }: { item: Product }) {
             imageUrl: item.image ?? "",
             prefix: item.currency,
             price: item.price,
-          })
-        }
+          });
+          toast.success(`${item.name} se añadió al carrito`);
+        }}
       >
         <ShoppingBag className="h-4 w-4" /> Añadir al carrito
       </button>
@@ -89,6 +86,9 @@ export default function Menu() {
     () => ["Todos", ...new Set(products.map((item) => item.category))],
     [products],
   );
+  const featuredProduct =
+    products.find((item) => item.featured && item.image) ??
+    products.find((item) => item.image);
   const filtered = useMemo(
     () =>
       products.filter(
@@ -103,40 +103,68 @@ export default function Menu() {
     <main className="min-w-0">
       <section className="mx-auto grid max-w-7xl gap-8 px-4 pt-8 pb-14 sm:px-6 sm:pt-12 sm:pb-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10 lg:px-10 lg:pt-16">
         <div className="min-w-0">
-          <p className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#f6e8f1] px-4 text-base font-medium text-[#48235c]">
-            <Flower2 className="h-5 w-5" aria-hidden="true" /> Bordados y
-            accesorios
+          <p className="text-store-brand mb-4 text-base font-semibold">
+            Bordados hechos a mano en Cartago
           </p>
-          <h1 className="font-display max-w-3xl text-5xl leading-[1.02] font-semibold tracking-tight text-[#48235c] sm:text-6xl lg:text-7xl">
-            Arte que se viste, tradición que perdura.
+          <h1 className="font-display text-store-brand max-w-3xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+            Prendas y accesorios bordados a mano
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-[#514060] sm:text-xl">
-            Prendas de vestir exclusivas bordadas a mano de Cartago en Medellín.
+            Piezas artesanales para usar y regalar. Revisa cada producto, su
+            precio y su plazo de entrega antes de comprar.
           </p>
           <Link
             href="#coleccion"
             className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#48235c] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#382047]"
           >
-            Explorar el catálogo
+            Ver todos los productos
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
-        <div className="relative min-w-0 rounded-[1.75rem] border border-[#e7dbea] bg-white p-2 shadow-[0_14px_45px_-30px_rgba(72,35,92,0.5)] sm:p-3">
-          <div className="relative aspect-[1280/705] overflow-hidden rounded-[1.25rem] bg-[#fffdf8]">
-            <Image
-              src="/primaveral-floral.jpg"
-              alt="Logotipo de Primaveral rodeado de flores coloridas"
-              fill
-              priority
-              sizes="(min-width: 1024px) 55vw, 100vw"
-              className="object-contain"
-            />
+        {featuredProduct ? (
+          <Link
+            href={`/menu/${featuredProduct.id}`}
+            aria-label={`Ver detalles de ${featuredProduct.name}`}
+            className="group border-store-border min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg"
+          >
+            <div className="relative aspect-[4/3] overflow-hidden bg-[#f2eaf5]">
+              <Image
+                src={featuredProduct.image!}
+                alt={featuredProduct.name}
+                fill
+                priority
+                sizes="(min-width: 1024px) 55vw, 100vw"
+                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+              <div className="min-w-0">
+                <p className="text-store-muted text-sm font-semibold">
+                  Producto destacado
+                </p>
+                <p className="text-store-ink mt-1 text-lg font-semibold">
+                  {featuredProduct.name}
+                </p>
+              </div>
+              <span className="store-price bg-store-accent text-store-ink rounded-lg px-3 py-2 text-lg font-bold">
+                {formatCOP(featuredProduct.price)}
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <div className="border-store-border relative min-w-0 rounded-2xl border bg-white p-2">
+            <div className="bg-store-surface relative aspect-[4/3] overflow-hidden rounded-xl">
+              <Image
+                src="/primaveral-floral.jpg"
+                alt="Primaveral Bordados de Cartago"
+                fill
+                priority
+                sizes="(min-width: 1024px) 55vw, 100vw"
+                className="object-contain"
+              />
+            </div>
           </div>
-          <Flower2
-            className="absolute -right-3 -bottom-3 h-12 w-12 rounded-full bg-[#f7e7a9] p-2.5 text-[#684281] sm:-right-4 sm:-bottom-4 sm:h-14 sm:w-14"
-            aria-hidden="true"
-          />
-        </div>
+        )}
       </section>
 
       <section
@@ -145,7 +173,7 @@ export default function Menu() {
       >
         <div className="flex flex-col gap-5 border-b border-[#e7dbea] pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="font-display mt-2 text-4xl font-semibold text-[#48235c] sm:text-5xl">
+            <h2 className="font-display text-store-brand mt-2 text-3xl font-semibold sm:text-4xl">
               Bordados y accesorios
             </h2>
           </div>
@@ -188,7 +216,12 @@ export default function Menu() {
           ))}
         </div>
         {isLoading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            role="status"
+            aria-label="Cargando productos"
+            aria-busy="true"
+            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          >
             {[1, 2, 3, 4].map((item) => (
               <div
                 key={item}

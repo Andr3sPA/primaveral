@@ -15,11 +15,12 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 ## Funcionalidades
 
 - Catálogo público con búsqueda, categorías, destacados y detalle de producto.
-- Identidad visual floral con navegación adaptable, catálogo accesible y enlaces de contacto.
+- Identidad visual floral con navegación adaptable, precios COP legibles, imágenes reales y controles amplios.
 - Carrito persistente en el navegador con cantidades y control de stock al crear pedidos.
-- Checkout preparado para conectar un proveedor de pago; actualmente registra el pedido como pendiente y no almacena datos de tarjeta.
+- Checkout de invitado o de cuenta verificada, pago al recibir y checkout hospedado de Wompi Sandbox/Producción con confirmación por webhook firmado; la aplicación no recibe ni almacena datos de tarjeta.
 - Registro e inicio de sesión con correo y contraseña, verificación de cuenta y recuperación de contraseña mediante Brevo.
 - Perfil con nombre/teléfono opcionales y dirección guardada con municipio y departamento; el checkout permite comprar autenticado o como invitado.
+- Seguimiento público sin iniciar sesión: busca por número y correo de compra o abre el enlace privado de los correos. Los correos de estado y pago llevan directamente al pedido correspondiente.
 - Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`; no hay acceso social con GitHub.
 - Panel administrativo en `/admin` con accesos a inventario, alta de productos, pedidos y métricas.
 - Productos con categoría, tallas, colores, imagen, precio, stock y disponibilidad.
@@ -63,6 +64,11 @@ Para probar sin cargos:
    de pedidos muestra el estado confirmado por el webhook. Si sigue pendiente,
    revisa la entrega del evento en Sandbox; regresar al navegador no confirma
    el pago por sí solo.
+
+Para preparar la prueba manual completa otro día —incluidos compra de invitado,
+correo, seguimiento público, cambios de estado y pago rechazado— sigue la
+[guía de prueba E2E de pedidos](docs/prueba-e2e-pedidos.es.md). No ejecutes una
+prueba con llaves de Producción ni uses una base de Producción.
 
 Para aceptar pagos reales, configura las llaves con prefijos `pub_prod_`,
 `prod_events_` y `prod_integrity_` **solo** en el entorno Vercel `Production`.

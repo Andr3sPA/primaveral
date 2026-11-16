@@ -51,6 +51,12 @@ export function SiteFooter() {
           </a>
           <Link
             className="flex min-h-11 items-center text-[#48235c] underline underline-offset-4"
+            href="/orders/track"
+          >
+            Seguimiento de pedidos
+          </Link>
+          <Link
+            className="flex min-h-11 items-center text-[#48235c] underline underline-offset-4"
             href="https://www.facebook.com/Bordadosddecartagoprimaveral"
             target="_blank"
             rel="noreferrer"

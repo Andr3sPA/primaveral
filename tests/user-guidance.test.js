@@ -115,12 +115,14 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   ]);
 
   assert.match(source, /Bordados y accesorios/);
-  assert.match(source, /Arte que se viste, tradición que perdura\./);
+  assert.match(source, /Prendas y accesorios bordados a mano/);
   assert.match(
     source,
-    /Prendas de vestir exclusivas bordadas a mano de Cartago en Medellín\./,
+    /Revisa cada producto, su\s+precio y su plazo de entrega antes de comprar\./,
   );
   assert.match(source, /src="\/primaveral-floral\.jpg"/);
+  assert.match(source, /featuredProduct\.image/);
+  assert.doesNotMatch(source, />Favorito</);
   assert.match(source, /No encontramos prendas con esa búsqueda/);
   assert.doesNotMatch(source, /Nueva temporada|pieza 01 \/ 04/);
   assert.match(source, /min-h-11[^"]*text-base/);
@@ -133,6 +135,26 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   assert.doesNotMatch(page, /<main/);
 
   assert.ok(contrastRatio("fffdf8", "48235c") >= 4.5);
+});
+
+test("public order tracking supports guest lookup and update emails link directly to the order", async () => {
+  const [navigation, tracking, orderRouter, notifications, webhook] =
+    await Promise.all([
+      readSource("src/components/navbar-client.tsx"),
+      readSource("src/components/GuestOrderTracking.tsx"),
+      readSource("src/server/api/routers/order.ts"),
+      readSource("src/server/orders/notifications.ts"),
+      readSource("src/app/api/wompi/events/route.ts"),
+    ]);
+
+  assert.match(navigation, /href: "\/orders\/track", label: "Seguir pedido"/);
+  assert.match(tracking, /Número del pedido/);
+  assert.match(tracking, /Correo usado para comprar/);
+  assert.match(orderRouter, /getOrderTrackingByReference/);
+  assert.match(orderRouter, /verifyOrderTrackingAccessToken/);
+  assert.match(notifications, /href="\$\{escapeHtml\(trackingUrl\)\}"/);
+  assert.match(notifications, /createOrderTrackingAccessToken\(orderId\)/);
+  assert.match(webhook, /sendOrderPaymentNotification/);
 });
 
 test("the shared footer provides the supplied business contacts and social links", async () => {

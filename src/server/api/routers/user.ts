@@ -301,6 +301,9 @@ export const userRouter = createTRPCRouter({
             },
           },
         },
+        payment: {
+          select: { method: true, status: true, wompiEnvironment: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
