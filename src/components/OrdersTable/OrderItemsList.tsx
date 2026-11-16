@@ -1,6 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Package } from "lucide-react";
 import type { FulfillmentType } from "@prisma/client";
+import Image from "next/image";
+import { formatCOP } from "@/lib/format-currency";
 
 interface Item {
   id: string;
@@ -8,7 +9,7 @@ interface Item {
   subtotal: number;
   fulfillmentType: FulfillmentType;
   leadTimeDays: number;
-  menuItem: { name: string };
+  menuItem: { name: string; image: string | null };
 }
 
 // Componente para mostrar la lista de ítems de un pedido
@@ -22,7 +23,21 @@ export default function OrderItemsList({ items }: { items: Item[] }) {
             className="flex items-center justify-between rounded-lg border p-3"
           >
             <div className="flex items-center gap-3">
-              <Package className="text-muted-foreground h-4 w-4" />
+              {item.menuItem.image ? (
+                <Image
+                  src={item.menuItem.image}
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="size-14 shrink-0 rounded-md object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className="bg-muted size-14 shrink-0 rounded-md"
+                />
+              )}
               <div>
                 <p className="font-medium">{item.menuItem.name}</p>
                 <p className="text-muted-foreground text-sm">
@@ -38,9 +53,11 @@ export default function OrderItemsList({ items }: { items: Item[] }) {
               </div>
             </div>
             <div className="text-right">
-              <p className="font-medium">${item.subtotal.toFixed(2)}</p>
-              <p className="text-muted-foreground text-sm">
-                ${(item.subtotal / item.quantity).toFixed(2)} c/u
+              <p className="font-medium tabular-nums">
+                {formatCOP(item.subtotal)}
+              </p>
+              <p className="text-muted-foreground text-sm tabular-nums">
+                {formatCOP(item.subtotal / item.quantity)} por unidad
               </p>
             </div>
           </div>

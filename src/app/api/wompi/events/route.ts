@@ -8,6 +8,10 @@ import {
   type WompiPaymentDatabase,
 } from "@/server/payments/wompi";
 import { db } from "@/server/db";
+import {
+  sendOrderEmailSafely,
+  sendOrderPaymentNotification,
+} from "@/server/orders/notifications";
 
 const MAX_EVENT_BYTES = 64 * 1024;
 
@@ -108,6 +112,26 @@ export async function POST(request: Request) {
     parsedTransaction.data,
     config.environment,
   );
+  if (result === "updated" && parsedTransaction.data.status !== "PENDING") {
+    const order = await db.order.findUnique({
+      where: { id: parsedTransaction.data.reference },
+      select: {
+        guestEmail: true,
+        user: { select: { email: true } },
+      },
+    });
+    const email = order?.user?.email ?? order?.guestEmail;
+    if (email) {
+      await sendOrderEmailSafely("la actualización del pago", () =>
+        sendOrderPaymentNotification({
+          orderId: parsedTransaction.data.reference,
+          status:
+            parsedTransaction.data.status === "APPROVED" ? "PAID" : "FAILED",
+          email,
+        }),
+      );
+    }
+  }
   if (result === "conflict") {
     console.error(
       `Wompi ${config.mode} reportó otra transacción para una referencia ya asociada.`,

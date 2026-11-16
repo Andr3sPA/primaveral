@@ -6,14 +6,8 @@ import OrderStatusBadge from "@/components/OrdersTable/OrderStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCOP } from "@/lib/format-currency";
 import { api } from "@/trpc/react";
-
-function formatAmount(amount: number, currency = "$") {
-  return `${currency}${amount.toLocaleString("es-CO", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 export function MyOrders() {
   const {
@@ -149,13 +143,36 @@ export function MyOrders() {
                             )}
                         </div>
                         <p className="shrink-0 text-right text-sm font-medium tabular-nums">
-                          {formatAmount(item.subtotal, item.menuItem.currency)}
+                          {formatCOP(item.subtotal)}
                         </p>
                       </li>
                     ))}
                   </ul>
                   <p className="mt-4 border-t pt-4 text-right text-lg font-semibold tabular-nums">
-                    Total: {formatAmount(order.total)}
+                    Total de productos: {formatCOP(order.total)}
+                  </p>
+                  <p className="text-store-muted mt-2 text-base">
+                    Pago:{" "}
+                    {order.payment?.method === "cash"
+                      ? order.payment.status === "PAID"
+                        ? "recibido"
+                        : "al recibir el pedido"
+                      : order.payment?.status === "PAID"
+                        ? "confirmado"
+                        : order.payment?.status === "FAILED"
+                          ? "no aprobado"
+                          : "pendiente de confirmación"}
+                    {order.payment?.method.startsWith("WOMPI") &&
+                      order.payment.wompiEnvironment && (
+                        <span>
+                          {" "}
+                          (
+                          {order.payment.wompiEnvironment === "test"
+                            ? "Sandbox"
+                            : "Producción"}
+                          )
+                        </span>
+                      )}
                   </p>
                 </CardContent>
               </Card>

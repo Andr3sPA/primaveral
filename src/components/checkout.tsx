@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { api } from "@/trpc/react";
 import { useCart } from "@/contexts/CartContext";
+import { formatCOP } from "@/lib/format-currency";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import {
@@ -166,7 +167,11 @@ export function Checkout() {
 
   if (!isHydrated || sessionStatus === "loading") {
     return (
-      <main className="botanical-page mx-auto max-w-6xl px-4 py-16 text-center text-stone-500 sm:px-6 sm:py-24">
+      <main
+        role="status"
+        aria-busy="true"
+        className="text-store-muted mx-auto max-w-6xl px-4 py-16 text-center text-base sm:px-6 sm:py-24"
+      >
         Cargando tu carrito...
       </main>
     );
@@ -182,7 +187,7 @@ export function Checkout() {
         <h1 className="font-display mt-6 text-3xl font-semibold text-[#48235c]">
           {checkout ? "Pedido listo para pagar" : "¡Pedido recibido!"}
         </h1>
-        <p className="mt-3 text-stone-500">
+        <p className="text-store-muted mt-3 text-base leading-7">
           {checkout
             ? checkout.mode === "production"
               ? "El pedido quedará pendiente hasta la confirmación de Wompi. Al continuar se realizará un cobro real."
@@ -249,7 +254,11 @@ export function Checkout() {
             </p>
           </div>
         )}
-        <Button className="mt-8 rounded-full" onClick={() => router.push("/")}>
+        <Button
+          size="lg"
+          className="mt-8 min-h-12"
+          onClick={() => router.push("/")}
+        >
           Volver a la tienda
         </Button>
       </main>
@@ -475,8 +484,8 @@ export function Checkout() {
                               className="h-5 w-5 shrink-0 text-[#684281]"
                               aria-hidden="true"
                             />
-                            <span className="text-sm font-medium">
-                              Pago al recibir el pedido
+                            <span className="text-base font-medium">
+                              Pago al recibir el pedido (contraentrega)
                             </span>
                           </label>
                           <label
@@ -488,9 +497,13 @@ export function Checkout() {
                           >
                             <RadioGroupItem
                               value="wompi"
-                              disabled={!wompiAvailability.data?.available}
+                              disabled={
+                                wompiAvailability.isLoading ||
+                                wompiAvailability.isError ||
+                                !wompiAvailability.data?.available
+                              }
                             />
-                            <span className="text-sm font-medium">
+                            <span className="text-base font-medium">
                               {wompiAvailability.data?.available
                                 ? wompiAvailability.data.mode === "production"
                                   ? "Tarjeta o PSE con Wompi Producción"
@@ -502,10 +515,7 @@ export function Checkout() {
                       </FormControl>
                       {wompiAvailability.data?.available &&
                         wompiAvailability.data.mode === "production" && (
-                          <p
-                            role="alert"
-                            className="rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-900"
-                          >
+                          <p className="rounded-lg bg-amber-50 p-3 text-base leading-6 text-amber-950">
                             Estás en Producción: continuar inicia un pago con
                             dinero real. Para probar sin cargos, usa una Preview
                             configurada con llaves Sandbox.
@@ -514,7 +524,7 @@ export function Checkout() {
                       {form.watch("paymentMethod") === "wompi" &&
                         wompiAvailability.data?.available &&
                         wompiAvailability.data.mode === "production" && (
-                          <label className="flex items-start gap-3 text-sm leading-6 text-[#35203f]">
+                          <label className="flex items-start gap-3 text-base leading-6 text-[#35203f]">
                             <input
                               type="checkbox"
                               {...form.register("confirmLivePayment")}
@@ -529,17 +539,25 @@ export function Checkout() {
                           {form.formState.errors.confirmLivePayment.message}
                         </p>
                       )}
-                      {!wompiAvailability.data?.available && (
-                        <p className="text-sm leading-6 text-[#514060]">
-                          Wompi no está habilitado:{" "}
-                          {wompiAvailability.data?.reason ??
-                            "no se pudo revisar la configuración"}{" "}
-                          Pago al recibir sigue disponible.
+                      {wompiAvailability.isLoading && (
+                        <p
+                          role="status"
+                          className="text-store-muted text-base leading-6"
+                        >
+                          Consultando si el pago con tarjeta está disponible...
                         </p>
                       )}
+                      {wompiAvailability.data &&
+                        !wompiAvailability.data.available && (
+                          <p className="text-base leading-6 text-[#514060]">
+                            Wompi no está habilitado:{" "}
+                            {wompiAvailability.data.reason} Pago al recibir
+                            sigue disponible.
+                          </p>
+                        )}
                       {wompiAvailability.error && (
                         <p role="alert" className="text-sm text-red-700">
-                          No se pudo verificar la disponibilidad de Wompi .
+                          No se pudo verificar la disponibilidad de Wompi.
                           Recarga la página antes de elegir el método.
                         </p>
                       )}
@@ -574,7 +592,15 @@ export function Checkout() {
                   className="min-h-12 w-full rounded-full bg-[#48235c] text-base font-semibold text-white hover:bg-[#382047]"
                 >
                   {createOrder.isPending ? (
-                    <Loader2 className="animate-spin" />
+                    <>
+                      <Loader2
+                        className="mr-2 animate-spin"
+                        aria-hidden="true"
+                      />
+                      Guardando pedido...
+                    </>
+                  ) : form.watch("paymentMethod") === "wompi" ? (
+                    "Preparar pedido y continuar al pago"
                   ) : (
                     "Confirmar pedido"
                   )}
@@ -612,9 +638,8 @@ export function Checkout() {
                       <p className="text-base font-medium break-words text-[#35203f]">
                         {item.title}
                       </p>
-                      <p className="text-base text-[#514060]">
-                        {item.prefix}
-                        {item.price.toFixed(2)}
+                      <p className="store-price text-base text-[#514060]">
+                        {formatCOP(item.price)}
                       </p>
                       {item.fulfillmentType === "SOURCED_TO_ORDER" && (
                         <p className="mt-1 text-sm text-[#514060]">
@@ -668,17 +693,20 @@ export function Checkout() {
                       </div>
                     </div>
                   </div>
-                  <p className="self-end text-base font-semibold text-[#35203f] sm:self-center">
-                    {item.prefix}
-                    {(item.price * item.quantity).toFixed(2)}
+                  <p className="store-price self-end text-base font-semibold text-[#35203f] sm:self-center">
+                    {formatCOP(item.price * item.quantity)}
                   </p>
                 </div>
               ))}
             </div>
             <div className="mt-6 flex justify-between border-t border-[#e7dbea] pt-5 text-lg font-semibold text-[#35203f]">
-              <span>Total</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>Total de productos</span>
+              <span className="store-price">{formatCOP(subtotal)}</span>
             </div>
+            <p className="text-store-muted mt-3 text-base leading-6">
+              El envío no está incluido. Te confirmaremos cualquier costo antes
+              de despachar.
+            </p>
           </CardContent>
         </Card>
       </aside>

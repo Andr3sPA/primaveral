@@ -40,17 +40,25 @@ function PaymentResultContent() {
           : "El enlace de estado no es válido o todavía no recibimos una confirmación. La página de retorno no confirma por sí sola el pago.";
 
   return (
-    <main className="botanical-page mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
-      <h1 className="font-display text-3xl font-semibold text-[#48235c]">
+    <main className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
+      <h1
+        aria-live="polite"
+        className="font-display text-3xl font-semibold text-[#48235c]"
+      >
         {payment.isLoading ? "Consultando pago..." : title}
       </h1>
-      <p className="mt-3 leading-7 text-stone-600">{description}</p>
+      <p
+        role={payment.isLoading ? "status" : undefined}
+        className="text-store-muted mt-3 text-base leading-7"
+      >
+        {description}
+      </p>
       {payment.isError && (
         <p role="alert" className="mt-3 text-sm text-red-700">
           No se pudo consultar el estado ahora. Recarga esta página más tarde.
         </p>
       )}
-      <Button asChild className="mt-8 rounded-full">
+      <Button asChild size="lg" className="mt-8 min-h-12 w-full">
         <Link href="/">Volver a la tienda</Link>
       </Button>
     </main>
@@ -61,7 +69,7 @@ export default function WompiPaymentResultPage() {
   return (
     <Suspense
       fallback={
-        <main className="botanical-page px-4 py-16 text-center text-stone-500">
+        <main role="status" className="text-store-muted px-4 py-16 text-center">
           Cargando estado del pago...
         </main>
       }

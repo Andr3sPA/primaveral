@@ -1,6 +1,11 @@
 import "server-only";
 
-import { createHash, randomBytes } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 
 export function createOrderTrackingToken() {
   return randomBytes(32).toString("base64url");
@@ -8,6 +13,47 @@ export function createOrderTrackingToken() {
 
 export function digestOrderTrackingToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+export function createOrderTrackingAccessToken(
+  orderId: string,
+  secret = process.env.AUTH_SECRET,
+) {
+  if (!secret) {
+    throw new Error("AUTH_SECRET is required for order tracking links.");
+  }
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(orderId)) {
+    throw new Error("Order ID is invalid.");
+  }
+
+  const signature = createHmac("sha256", secret)
+    .update(orderId)
+    .digest("base64url");
+  return `${orderId}.${signature}`;
+}
+
+export function verifyOrderTrackingAccessToken(
+  token: string,
+  secret = process.env.AUTH_SECRET,
+) {
+  if (!secret) return null;
+  const [orderId, signature, ...rest] = token.split(".");
+  if (
+    !orderId ||
+    !signature ||
+    rest.length > 0 ||
+    !/^[A-Za-z0-9_-]{1,64}$/.test(orderId) ||
+    !/^[A-Za-z0-9_-]{43}$/.test(signature)
+  ) {
+    return null;
+  }
+
+  const expected = createHmac("sha256", secret).update(orderId).digest();
+  const supplied = Buffer.from(signature, "base64url");
+  return supplied.length === expected.length &&
+    timingSafeEqual(supplied, expected)
+    ? orderId
+    : null;
 }
 
 export function orderTrackingPath(token: string) {

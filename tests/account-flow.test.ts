@@ -746,7 +746,7 @@ test("the complete account and checkout flow works with an in-memory database an
       guestOrderNotification.textContent,
       /entrega estimada: 45 días/,
     );
-    assert.match(guestOrderNotification.textContent, /Total: \$25,00/);
+    assert.match(guestOrderNotification.textContent, /Total de productos:.*25/);
     assert.match(guestOrderNotification.htmlContent, /<h1[^>]*>Nuevo pedido/);
     const guestTrackingUrl = new URL(
       guestOrder.trackingUrl!,
@@ -959,8 +959,8 @@ test("order status emails go to the customer only after a real status change", a
       email.subject.startsWith("Actualización"),
     )!;
     assert.equal(firstStatusEmail.to[0]?.email, "cliente@example.test");
-    assert.match(firstStatusEmail.textContent, /Preparando/);
-    assert.match(firstStatusEmail.textContent, /enlace de seguimiento/);
+    assert.match(firstStatusEmail.textContent, /En preparación/);
+    assert.match(firstStatusEmail.textContent, /\/orders\/track\?token=/);
     await adminCaller.order.updateOrderStatus({
       orderId: order.id,
       status: "PREPARING",
@@ -1016,7 +1016,7 @@ test("order status emails go to the customer only after a real status change", a
         email.subject.includes(registeredOrder.id),
     )!;
     assert.equal(registeredStatusEmail.to[0]?.email, "cuenta@example.test");
-    assert.match(registeredStatusEmail.textContent, /Mi perfil/);
+    assert.match(registeredStatusEmail.textContent, /\/orders\/track\?token=/);
     assert.doesNotMatch(
       registeredStatusEmail.textContent,
       /enlace de seguimiento/,

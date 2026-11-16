@@ -1,19 +1,27 @@
 import { z } from "zod";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import {
   adminProcedure,
   createTRPCRouter,
   publicProcedure,
 } from "@/server/api/trpc";
-import { getSafeErrorMetadata } from "@/server/api/error-messages";
+import {
+  getAllowedOrderStatusTransitions,
+  getOrderStatusLabel,
+} from "@/lib/order-status";
 import { sendBrevoEmail } from "@/server/email/brevo";
-import { getOrderStatusLabel } from "@/lib/order-status";
+import {
+  sendOrderEmailSafely,
+  sendOrderPaymentNotification,
+  sendOrderStatusNotification,
+} from "@/server/orders/notifications";
 import {
   absoluteOrderTrackingUrl,
   createOrderTrackingToken,
   digestOrderTrackingToken,
   orderTrackingPath,
+  verifyOrderTrackingAccessToken,
 } from "@/server/orders/order-tracking";
 import {
   createPaymentStatusToken,
@@ -25,8 +33,28 @@ import {
   WompiConfigurationError,
   type WompiConfig,
 } from "@/server/payments/wompi";
+import { formatCOP } from "@/lib/format-currency";
 
 const ORDER_NOTIFICATION_EMAIL = "primaveralbordados@gmail.com";
+const publicTrackingOrderSelect = {
+  id: true,
+  status: true,
+  createdAt: true,
+  total: true,
+  orderItems: {
+    select: {
+      id: true,
+      quantity: true,
+      subtotal: true,
+      fulfillmentType: true,
+      leadTimeDays: true,
+      menuItem: { select: { name: true, image: true } },
+    },
+  },
+  payment: {
+    select: { method: true, status: true, wompiEnvironment: true },
+  },
+} satisfies Prisma.OrderSelect;
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
@@ -39,13 +67,6 @@ function escapeHtml(value: string) {
     };
     return entities[character]!;
   });
-}
-
-function formatCurrency(amount: number) {
-  return `$${amount.toLocaleString("es-CO", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 async function sendNewOrderNotification({
@@ -78,7 +99,7 @@ async function sendNewOrderNotification({
   const items = lines
     .map(
       ({ product, quantity, subtotal, fulfillmentType, leadTimeDays }) =>
-        `${quantity} × ${product.name} — ${formatCurrency(subtotal)}${fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0 ? ` — entrega estimada: ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"}` : ""}`,
+        `${quantity} × ${product.name} — ${formatCOP(subtotal)}${fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0 ? ` — entrega estimada: ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"}` : ""}`,
     )
     .join("\n");
   const customerName = name?.trim() ? name.trim() : "No indicado";
@@ -97,15 +118,15 @@ async function sendNewOrderNotification({
     "Productos:",
     items,
     "",
-    `Total: ${formatCurrency(total)}`,
+    `Total de productos: ${formatCOP(total)}`,
   ].join("\n");
   const htmlItems = lines
     .map(
       ({ product, quantity, subtotal, fulfillmentType, leadTimeDays }) =>
-        `<li>${quantity} × ${escapeHtml(product.name)} — ${formatCurrency(subtotal)}${fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0 ? ` — entrega estimada: ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"}` : ""}</li>`,
+        `<li>${quantity} × ${escapeHtml(product.name)} — ${formatCOP(subtotal)}${fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0 ? ` — entrega estimada: ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"}` : ""}</li>`,
     )
     .join("");
-  const htmlContent = `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;color:#35283b;line-height:1.6;"><h1 style="color:#48235c;">Nuevo pedido en Primaveral</h1><p><strong>Pedido:</strong> ${escapeHtml(orderId)}</p><p><strong>Cliente:</strong> ${escapeHtml(customerName)}<br><strong>Correo:</strong> ${escapeHtml(email)}<br><strong>Teléfono:</strong> ${escapeHtml(customerPhone)}<br><strong>Dirección:</strong> ${escapeHtml(address)}<br><strong>Municipio:</strong> ${escapeHtml(municipality)}<br><strong>Departamento:</strong> ${escapeHtml(department)}</p><h2>Productos</h2><ul>${htmlItems}</ul><p><strong>Total:</strong> ${formatCurrency(total)}</p></div>`;
+  const htmlContent = `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;color:#35283b;line-height:1.6;"><h1 style="color:#48235c;">Nuevo pedido en Primaveral</h1><p><strong>Pedido:</strong> ${escapeHtml(orderId)}</p><p><strong>Cliente:</strong> ${escapeHtml(customerName)}<br><strong>Correo:</strong> ${escapeHtml(email)}<br><strong>Teléfono:</strong> ${escapeHtml(customerPhone)}<br><strong>Dirección:</strong> ${escapeHtml(address)}<br><strong>Municipio:</strong> ${escapeHtml(municipality)}<br><strong>Departamento:</strong> ${escapeHtml(department)}</p><h2>Productos</h2><ul>${htmlItems}</ul><p><strong>Total de productos:</strong> ${formatCOP(total)}</p><p>El costo de envío, si aplica, se confirma antes del despacho.</p></div>`;
 
   await sendBrevoEmail({
     to: ORDER_NOTIFICATION_EMAIL,
@@ -122,14 +143,9 @@ async function sendCustomerOrderConfirmation({
 }: {
   orderId: string;
   email: string;
-  trackingToken: string | null;
+  trackingToken: string;
 }) {
-  const trackingUrl = trackingToken
-    ? absoluteOrderTrackingUrl(trackingToken)
-    : null;
-  const trackingMessage = trackingUrl
-    ? `Consulta el estado de tu pedido aquí: ${trackingUrl}`
-    : "Puedes consultar tu pedido desde la sección Mi perfil después de iniciar sesión.";
+  const trackingUrl = absoluteOrderTrackingUrl(trackingToken);
   await sendBrevoEmail({
     to: email,
     subject: `Recibimos tu pedido ${orderId} | Primaveral`,
@@ -137,47 +153,12 @@ async function sendCustomerOrderConfirmation({
       "Gracias por comprar en Primaveral.",
       "",
       `Pedido: ${orderId}`,
-      trackingMessage,
+      `Consulta el estado de tu pedido aquí: ${trackingUrl}`,
       "",
       "Te enviaremos un correo si cambia el estado de tu pedido.",
     ].join("\n"),
-    htmlContent: `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;color:#35283b;line-height:1.6;"><h1 style="color:#48235c;">Recibimos tu pedido</h1><p>Gracias por comprar en Primaveral.</p><p><strong>Pedido:</strong> ${escapeHtml(orderId)}</p><p>${trackingUrl ? `<a href="${escapeHtml(trackingUrl)}">Consultar el estado del pedido</a>` : "Puedes consultar tu pedido desde la sección Mi perfil después de iniciar sesión."}</p><p>Te enviaremos un correo si cambia el estado de tu pedido.</p></div>`,
+    htmlContent: `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;color:#35283b;line-height:1.6;"><h1 style="color:#48235c;">Recibimos tu pedido</h1><p>Gracias por comprar en Primaveral.</p><p><strong>Pedido:</strong> ${escapeHtml(orderId)}</p><p><a href="${escapeHtml(trackingUrl)}">Consultar el estado del pedido</a></p><p>Te enviaremos un correo si cambia el estado de tu pedido.</p></div>`,
   });
-}
-
-async function sendOrderStatusNotification({
-  orderId,
-  status,
-  email,
-  isGuest,
-}: {
-  orderId: string;
-  status: OrderStatus;
-  email: string;
-  isGuest: boolean;
-}) {
-  const statusLabel = getOrderStatusLabel(status);
-  const nextStep = isGuest
-    ? "Consulta el enlace de seguimiento que recibiste al realizar tu compra."
-    : "Inicia sesión y consulta el estado desde Mi perfil.";
-  const textContent = `El estado de tu pedido ${orderId} cambió a: ${statusLabel}.\n\n${nextStep}`;
-  await sendBrevoEmail({
-    to: email,
-    subject: `Actualización de tu pedido ${orderId} | Primaveral`,
-    textContent,
-    htmlContent: `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;color:#35283b;line-height:1.6;"><h1 style="color:#48235c;">Actualización de tu pedido</h1><p>El estado del pedido <strong>${escapeHtml(orderId)}</strong> cambió a <strong>${escapeHtml(statusLabel)}</strong>.</p><p>${escapeHtml(nextStep)}</p></div>`,
-  });
-}
-
-async function sendOrderEmailSafely(label: string, send: () => Promise<void>) {
-  try {
-    await send();
-  } catch (error) {
-    console.error(
-      `No se pudo enviar ${label} mediante Brevo.`,
-      getSafeErrorMetadata(error),
-    );
-  }
 }
 
 export const createOrderInputSchema = z.object({
@@ -298,10 +279,8 @@ export const orderRouter = createTRPCRouter({
         };
       });
       const total = lines.reduce((sum, line) => sum + line.subtotal, 0);
-      const trackingToken = customer ? null : createOrderTrackingToken();
-      const storedTrackingToken = trackingToken
-        ? digestOrderTrackingToken(trackingToken)
-        : null;
+      const trackingToken = createOrderTrackingToken();
+      const storedTrackingToken = digestOrderTrackingToken(trackingToken);
 
       const order = await ctx.db.$transaction(async (tx) => {
         if (customer && input.saveAddress) {
@@ -375,9 +354,7 @@ export const orderRouter = createTRPCRouter({
       const customerPhone = input.phone?.trim()
         ? input.phone
         : (customer?.phone ?? null);
-      const customerTrackingUrl = trackingToken
-        ? orderTrackingPath(trackingToken)
-        : null;
+      const customerTrackingUrl = orderTrackingPath(trackingToken);
       await sendOrderEmailSafely("el aviso del nuevo pedido", () =>
         sendNewOrderNotification({
           orderId: order.id,
@@ -439,27 +416,38 @@ export const orderRouter = createTRPCRouter({
 
   getGuestOrderTracking: publicProcedure
     .input(z.object({ token: z.string().min(20).max(128) }))
-    .query(({ ctx, input }) =>
-      ctx.db.order.findUnique({
-        where: {
-          trackingToken: digestOrderTrackingToken(input.token),
-        },
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          total: true,
-          orderItems: {
-            select: {
-              id: true,
-              quantity: true,
-              subtotal: true,
-              fulfillmentType: true,
-              leadTimeDays: true,
-              menuItem: { select: { name: true } },
+    .query(({ ctx, input }) => {
+      const signedOrderId = verifyOrderTrackingAccessToken(input.token);
+      return signedOrderId
+        ? ctx.db.order.findUnique({
+            where: { id: signedOrderId },
+            select: publicTrackingOrderSelect,
+          })
+        : ctx.db.order.findUnique({
+            where: {
+              trackingToken: digestOrderTrackingToken(input.token),
             },
-          },
+            select: publicTrackingOrderSelect,
+          });
+    }),
+
+  getOrderTrackingByReference: publicProcedure
+    .input(
+      z.object({
+        orderId: z.string().cuid(),
+        email: z.string().trim().toLowerCase().email().max(254),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      ctx.db.order.findFirst({
+        where: {
+          id: input.orderId,
+          OR: [
+            { guestEmail: input.email },
+            { user: { is: { email: input.email } } },
+          ],
         },
+        select: publicTrackingOrderSelect,
       }),
     ),
 
@@ -508,10 +496,37 @@ export const orderRouter = createTRPCRouter({
       if (currentOrder.status === input.status) {
         return { id: currentOrder.id, status: currentOrder.status };
       }
+      if (
+        !getAllowedOrderStatusTransitions(currentOrder.status).includes(
+          input.status,
+        )
+      ) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `No se puede cambiar el pedido de ${getOrderStatusLabel(currentOrder.status)} a ${getOrderStatusLabel(input.status)}.`,
+        });
+      }
 
-      const update = await ctx.db.order.updateMany({
-        where: { id: input.orderId, status: currentOrder.status },
-        data: { status: input.status },
+      const update = await ctx.db.$transaction(async (tx) => {
+        const changed = await tx.order.updateMany({
+          where: { id: input.orderId, status: currentOrder.status },
+          data: { status: input.status },
+        });
+        if (changed.count === 1 && input.status === "CANCELLED") {
+          const items = await tx.orderItem.findMany({
+            where: { orderId: input.orderId },
+            select: { menuItemId: true, quantity: true },
+          });
+          await Promise.all(
+            items.map((item) =>
+              tx.menuItem.update({
+                where: { id: item.menuItemId },
+                data: { stock: { increment: item.quantity } },
+              }),
+            ),
+          );
+        }
+        return changed;
       });
       if (update.count !== 1) {
         const latestOrder = await ctx.db.order.findUnique({
@@ -539,11 +554,74 @@ export const orderRouter = createTRPCRouter({
             orderId: input.orderId,
             status: input.status,
             email: customerEmail,
-            isGuest: !currentOrder.userId && Boolean(currentOrder.guestEmail),
           }),
         );
       }
 
       return { id: currentOrder.id, status: input.status };
+    }),
+
+  confirmCashPayment: adminProcedure
+    .input(z.object({ orderId: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const payment = await ctx.db.payment.findUnique({
+        where: { orderId: input.orderId },
+        select: {
+          id: true,
+          method: true,
+          status: true,
+          order: {
+            select: {
+              status: true,
+              guestEmail: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
+      });
+      if (!payment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No encontramos el pago de este pedido.",
+        });
+      }
+      if (
+        payment.method !== "cash" ||
+        payment.status !== "PENDING" ||
+        payment.order.status === "CANCELLED"
+      ) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Solo se puede confirmar un pago al recibir que esté pendiente.",
+        });
+      }
+      const updated = await ctx.db.payment.updateMany({
+        where: {
+          id: payment.id,
+          method: "cash",
+          status: "PENDING",
+        },
+        data: { status: "PAID" },
+      });
+      if (updated.count !== 1) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "El estado del pago cambió. Actualiza el pedido e inténtalo de nuevo.",
+        });
+      }
+
+      const email = payment.order.user?.email ?? payment.order.guestEmail;
+      if (email) {
+        await sendOrderEmailSafely("la confirmación del pago recibido", () =>
+          sendOrderPaymentNotification({
+            orderId: input.orderId,
+            status: "PAID",
+            email,
+          }),
+        );
+      }
+      return { orderId: input.orderId, status: "PAID" as const };
     }),
 });

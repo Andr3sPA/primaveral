@@ -24,6 +24,7 @@ export function NavbarClient() {
   const links = [
     { href: "/", label: "Inicio" },
     { href: "/#coleccion", label: "Catálogo" },
+    { href: "/orders/track", label: "Seguir pedido" },
     { href: "/#contacto", label: "Contacto" },
     ...(isAdmin ? [{ href: "/admin", label: "Administración" }] : []),
   ];

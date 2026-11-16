@@ -22,6 +22,11 @@ import { toast } from "sonner";
 import { api } from "@/trpc/react";
 import { type OrderStatus } from "@prisma/client";
 import OrderItemsList from "./OrderItemsList";
+import {
+  getAllowedOrderStatusTransitions,
+  getOrderStatusLabel,
+} from "@/lib/order-status";
+import { formatCOP } from "@/lib/format-currency";
 
 // Componente para mostrar el diálogo con los detalles de un pedido y permitir actualizar su estado
 export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
@@ -41,11 +46,19 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
       onSuccess: () => {
         toast.success("Estado del pedido actualizado correctamente.");
         void utils.order.getOrders.invalidate();
+        void utils.order.getOrderDetails.invalidate(orderId);
         setOpen(false);
       },
-      onError: () => {
-        toast.error("Error al actualizar el estado del pedido.");
+      onError: (error) => toast.error(error.message),
+    });
+  const { mutate: confirmCashPayment, isPending: isConfirmingCashPayment } =
+    api.order.confirmCashPayment.useMutation({
+      onSuccess: () => {
+        toast.success("Pago recibido confirmado.");
+        void utils.order.getOrders.invalidate();
+        void utils.order.getOrderDetails.invalidate(orderId);
       },
+      onError: (error) => toast.error(error.message),
     });
 
   React.useEffect(() => {
@@ -62,6 +75,12 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
       });
     }
   };
+  const selectableStatuses = orderDetails
+    ? [
+        orderDetails.status,
+        ...getAllowedOrderStatusTransitions(orderDetails.status),
+      ]
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -123,10 +142,25 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
               <OrderItemsList items={orderDetails.orderItems} />
             </div>
             <Separator />
+            {orderDetails.payment?.method === "cash" &&
+              orderDetails.payment.status === "PENDING" && (
+                <Button
+                  type="button"
+                  size="lg"
+                  className="min-h-12"
+                  disabled={isConfirmingCashPayment}
+                  onClick={() => confirmCashPayment({ orderId })}
+                >
+                  {isConfirmingCashPayment
+                    ? "Confirmando pago..."
+                    : "Marcar pago recibido"}
+                </Button>
+              )}
+            <Separator />
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-semibold">
-                  Total: ${orderDetails.total.toFixed(2)}
+                  Total: {formatCOP(orderDetails.total)}
                 </p>
                 <p className="text-sm">
                   Pago:{" "}
@@ -150,6 +184,16 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                 <label className="text-sm font-medium">
                   Estado del Pedido:
                 </label>
+                {selectedStatus === "CANCELLED" &&
+                  orderDetails.payment?.status === "PAID" && (
+                    <p
+                      role="alert"
+                      className="max-w-sm text-sm leading-6 text-amber-900"
+                    >
+                      Cancelar no procesa un reembolso. Gestiona la devolución
+                      del dinero por separado antes de cerrar este pedido.
+                    </p>
+                  )}
                 <div className="flex gap-2">
                   <Select
                     value={selectedStatus}
@@ -161,11 +205,11 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                       <SelectValue placeholder="Seleccionar estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PENDING">Pendiente</SelectItem>
-                      <SelectItem value="PREPARING">Preparando</SelectItem>
-                      <SelectItem value="READY">Listo</SelectItem>
-                      <SelectItem value="DELIVERED">Entregado</SelectItem>
-                      <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                      {selectableStatuses.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {getOrderStatusLabel(status)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Button
@@ -178,6 +222,13 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                     {isPending ? "Actualizando..." : "Actualizar"}
                   </Button>
                 </div>
+                {orderDetails &&
+                  getAllowedOrderStatusTransitions(orderDetails.status)
+                    .length === 0 && (
+                    <p className="text-muted-foreground text-sm">
+                      Este pedido ya no admite cambios de estado.
+                    </p>
+                  )}
               </div>
             </div>
           </div>
