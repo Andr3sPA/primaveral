@@ -137,6 +137,24 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   assert.ok(contrastRatio("fffdf8", "48235c") >= 4.5);
 });
 
+test("the homepage logo stays visible independently of the featured product", async () => {
+  const source = await readSource("src/components/main/menu.tsx");
+  const heroStart = source.indexOf(
+    '<section className="mx-auto grid max-w-7xl',
+  );
+  const heroEnd = source.indexOf("</section>", heroStart);
+  const hero = source.slice(heroStart, heroEnd);
+
+  assert.ok(heroStart >= 0);
+  assert.ok(heroEnd > heroStart);
+  assert.match(hero, /src="\/primaveral-floral\.jpg"/);
+  assert.doesNotMatch(hero, /featuredProduct/);
+  assert.match(
+    source,
+    /aria-label="Producto destacado"[\s\S]*?featuredProduct\.image/,
+  );
+});
+
 test("public order tracking supports guest lookup and update emails link directly to the order", async () => {
   const [navigation, tracking, orderRouter, notifications, webhook] =
     await Promise.all([

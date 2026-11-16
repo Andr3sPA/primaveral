@@ -121,19 +121,36 @@ export default function Menu() {
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
-        {featuredProduct ? (
+        <div className="border-store-border relative min-w-0 rounded-2xl border bg-white p-2">
+          <div className="bg-store-surface relative aspect-[4/3] overflow-hidden rounded-xl">
+            <Image
+              src="/primaveral-floral.jpg"
+              alt="Primaveral Bordados de Cartago"
+              fill
+              priority
+              sizes="(min-width: 1024px) 55vw, 100vw"
+              className="object-contain"
+            />
+          </div>
+        </div>
+      </section>
+
+      {featuredProduct && (
+        <section
+          aria-label="Producto destacado"
+          className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-10"
+        >
           <Link
             href={`/menu/${featuredProduct.id}`}
             aria-label={`Ver detalles de ${featuredProduct.name}`}
-            className="group border-store-border min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg"
+            className="group border-store-border grid min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg lg:grid-cols-[1fr_1.2fr]"
           >
             <div className="relative aspect-[4/3] overflow-hidden bg-[#f2eaf5]">
               <Image
                 src={featuredProduct.image!}
                 alt={featuredProduct.name}
                 fill
-                priority
-                sizes="(min-width: 1024px) 55vw, 100vw"
+                sizes="(min-width: 1024px) 40vw, 100vw"
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               />
             </div>
@@ -151,21 +168,8 @@ export default function Menu() {
               </span>
             </div>
           </Link>
-        ) : (
-          <div className="border-store-border relative min-w-0 rounded-2xl border bg-white p-2">
-            <div className="bg-store-surface relative aspect-[4/3] overflow-hidden rounded-xl">
-              <Image
-                src="/primaveral-floral.jpg"
-                alt="Primaveral Bordados de Cartago"
-                fill
-                priority
-                sizes="(min-width: 1024px) 55vw, 100vw"
-                className="object-contain"
-              />
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section
         id="coleccion"
