@@ -1,0 +1,3 @@
+ALTER TABLE "OrderItem"
+ADD COLUMN "fulfillmentType" "FulfillmentType" NOT NULL DEFAULT 'READY_TO_SHIP',
+ADD COLUMN "leadTimeDays" INTEGER NOT NULL DEFAULT 0;

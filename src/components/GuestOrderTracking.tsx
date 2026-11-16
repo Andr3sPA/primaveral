@@ -94,6 +94,13 @@ export function GuestOrderTracking({ token }: { token: string }) {
                     <span className="text-muted-foreground ml-2 text-sm tabular-nums">
                       × {item.quantity}
                     </span>
+                    {item.fulfillmentType === "SOURCED_TO_ORDER" &&
+                      item.leadTimeDays > 0 && (
+                        <span className="text-muted-foreground block text-sm">
+                          Entrega estimada: {item.leadTimeDays}{" "}
+                          {item.leadTimeDays === 1 ? "día" : "días"}
+                        </span>
+                      )}
                   </span>
                   <span className="shrink-0 text-sm font-medium tabular-nums">
                     {formatCurrency(item.subtotal)}

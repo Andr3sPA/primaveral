@@ -140,6 +140,13 @@ export function MyOrders() {
                           <p className="text-muted-foreground mt-1 text-sm tabular-nums">
                             Cantidad: {item.quantity}
                           </p>
+                          {item.fulfillmentType === "SOURCED_TO_ORDER" &&
+                            item.leadTimeDays > 0 && (
+                              <p className="text-muted-foreground mt-1 text-sm">
+                                Entrega estimada: {item.leadTimeDays}{" "}
+                                {item.leadTimeDays === 1 ? "día" : "días"}
+                              </p>
+                            )}
                         </div>
                         <p className="shrink-0 text-right text-sm font-medium tabular-nums">
                           {formatAmount(item.subtotal, item.menuItem.currency)}

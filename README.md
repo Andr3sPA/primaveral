@@ -23,7 +23,62 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 - Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`; no hay acceso social con GitHub.
 - Panel administrativo en `/admin` con accesos a inventario, alta de productos, pedidos y métricas.
 - Productos con categoría, tallas, colores, imagen, precio, stock y disponibilidad.
-- Cada producto puede marcarse como `Envío inmediato` o `Traer por encargo`, con un plazo estimado en días visible en la ficha, bolsa y checkout.
+- Cada producto puede marcarse como `Envío inmediato` o `Traer por encargo`. El administrador configura el plazo en días calendario (de 0 a 365, incluidos plazos de 30 días o más); se muestra en la ficha, bolsa y checkout, y se guarda como una copia en cada pedido para que cambios posteriores al producto no alteren pedidos existentes.
+
+### Pagos Wompi: Sandbox y Producción
+
+El checkout usa el Web Checkout hospedado de Wompi: la aplicación no recibe ni
+almacena datos de tarjetas. Las llaves y secretos deben pertenecer todos al
+mismo ambiente; mezclas test/prod se rechazan. El evento firmado debe coincidir
+con el ambiente del pago guardado. El retorno del navegador es informativo y
+nunca marca por sí solo un pago como aprobado.
+
+**Producción cobra dinero real.** Si el comprador continúa con llaves
+`*_prod_*`, Wompi puede cobrar el método de pago real. El checkout muestra una
+advertencia y exige confirmación antes de crear el pedido de pago. No pruebes
+con tarjeta real ni habilites llaves de producción para una compra de prueba.
+
+Para probar sin cargos:
+
+1. Crea una **Preview** HTTPS y una base de datos de prueba aislada. En las
+   variables de entorno de Preview configura `WOMPI_LLAVE_PUBLICA` con prefijo
+   `pub_test_`, `WOMPI_EVENTOS` con `test_events_`, `WOMPI_INTEGRIDAD` con
+   `test_integrity_` y `WOMPI_REDIRECT_URL` con la URL absoluta
+   `https://<tu-preview>/checkout/resultado`. No configures llaves `*_prod_*`.
+2. Despliega la Preview y aplica las migraciones a esa base aislada con
+   `npm run db:migrate`, usando únicamente su `DATABASE_URL`.
+3. En el Dashboard de **Sandbox** de Wompi, configura la URL de eventos como
+   `https://<tu-preview>/api/wompi/events` y selecciona `transaction.updated`.
+   Copia el secreto de eventos Sandbox a `WOMPI_EVENTOS` y el secreto de
+   integridad Sandbox a `WOMPI_INTEGRIDAD`; guarda las variables y vuelve a
+   desplegar la Preview si las modificaste.
+4. En la Preview, inicia un checkout y selecciona “Tarjeta o PSE con Wompi
+   Sandbox”. Pulsa “Ir al checkout de Wompi Sandbox” y usa solo los datos de
+   prueba vigentes en la [documentación oficial de Wompi](https://docs.wompi.co/docs/colombia/datos-para-pruebas/).
+   Por ejemplo, la documentación publica `4242 4242 4242 4242` para aprobado
+   y `4111 1111 1111 1111` para declinado; usa una fecha futura y el CVC de
+   prueba indicado allí. Nunca ingreses una tarjeta real.
+5. Comprueba en el Dashboard Sandbox que Wompi entregó el evento con HTTP 200.
+   La ruta `/checkout/resultado` consulta el estado y la tabla administrativa
+   de pedidos muestra el estado confirmado por el webhook. Si sigue pendiente,
+   revisa la entrega del evento en Sandbox; regresar al navegador no confirma
+   el pago por sí solo.
+
+Para aceptar pagos reales, configura las llaves con prefijos `pub_prod_`,
+`prod_events_` y `prod_integrity_` **solo** en el entorno Vercel `Production`.
+También configura `WOMPI_LIVE_PAYMENTS_ENABLED=true`, `APP_URL` como el origen
+HTTPS canónico de producción y `WOMPI_REDIRECT_URL` como
+`<APP_URL>/checkout/resultado`. La aplicación rechaza llaves live en Preview o
+local, aun si el interruptor live está presente. Registra
+`<APP_URL>/api/wompi/events` en el ambiente Producción del Dashboard de Wompi
+con `transaction.updated`. No copies secretos live a Preview/local.
+
+El endpoint es `POST /api/wompi/events`; el retorno configurado es
+`/checkout/resultado`. `WOMPI_LLAVE_PRIVADA` no se usa con este Web Checkout.
+Las pruebas automatizadas son mockeadas y no hacen solicitudes a Wompi. No se
+hizo ninguna transacción Sandbox ni real desde este entorno. Sigue las guías
+oficiales sobre [ambientes y llaves](https://docs.wompi.co/docs/colombia/ambientes-y-llaves/)
+y [eventos y firmas](https://docs.wompi.co/docs/colombia/eventos/).
 
 ## Variables de entorno
 

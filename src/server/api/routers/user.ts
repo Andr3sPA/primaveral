@@ -294,6 +294,8 @@ export const userRouter = createTRPCRouter({
             id: true,
             quantity: true,
             subtotal: true,
+            fulfillmentType: true,
+            leadTimeDays: true,
             menuItem: {
               select: { id: true, name: true, image: true, currency: true },
             },

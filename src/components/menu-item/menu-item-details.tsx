@@ -162,8 +162,10 @@ function MenuItemDetails({
               </p>
               <p className="text-muted-foreground mt-1">
                 {fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0
-                  ? `Estimamos ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"} para traerla y dejarla lista.`
-                  : "La preparamos para despacho en 1 a 2 días hábiles."}
+                  ? `Estimamos ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"} calendario para recibirla y dejarla lista.`
+                  : fulfillmentType === "SOURCED_TO_ORDER"
+                    ? "El plazo de entrega se confirmará antes de completar la compra."
+                    : "La preparamos para despacho en 1 a 2 días hábiles."}
               </p>
             </div>
 

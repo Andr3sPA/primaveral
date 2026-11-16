@@ -15,6 +15,16 @@ import {
   digestOrderTrackingToken,
   orderTrackingPath,
 } from "@/server/orders/order-tracking";
+import {
+  createPaymentStatusToken,
+  createWompiCheckoutData,
+  digestPaymentStatusToken,
+  getWompiAvailability,
+  isLivePaymentConfirmationValid,
+  readWompiConfig,
+  WompiConfigurationError,
+  type WompiConfig,
+} from "@/server/payments/wompi";
 
 const ORDER_NOTIFICATION_EMAIL = "primaveralbordados@gmail.com";
 
@@ -60,13 +70,15 @@ async function sendNewOrderNotification({
     product: { name: string };
     quantity: number;
     subtotal: number;
+    fulfillmentType: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
+    leadTimeDays: number;
   }>;
   total: number;
 }) {
   const items = lines
     .map(
-      ({ product, quantity, subtotal }) =>
-        `${quantity} × ${product.name} — ${formatCurrency(subtotal)}`,
+      ({ product, quantity, subtotal, fulfillmentType, leadTimeDays }) =>
+        `${quantity} × ${product.name} — ${formatCurrency(subtotal)}${fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0 ? ` — entrega estimada: ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"}` : ""}`,
     )
     .join("\n");
   const customerName = name?.trim() ? name.trim() : "No indicado";
@@ -89,8 +101,8 @@ async function sendNewOrderNotification({
   ].join("\n");
   const htmlItems = lines
     .map(
-      ({ product, quantity, subtotal }) =>
-        `<li>${quantity} × ${escapeHtml(product.name)} — ${formatCurrency(subtotal)}</li>`,
+      ({ product, quantity, subtotal, fulfillmentType, leadTimeDays }) =>
+        `<li>${quantity} × ${escapeHtml(product.name)} — ${formatCurrency(subtotal)}${fulfillmentType === "SOURCED_TO_ORDER" && leadTimeDays > 0 ? ` — entrega estimada: ${leadTimeDays} ${leadTimeDays === 1 ? "día" : "días"}` : ""}</li>`,
     )
     .join("");
   const htmlContent = `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;color:#35283b;line-height:1.6;"><h1 style="color:#48235c;">Nuevo pedido en Primaveral</h1><p><strong>Pedido:</strong> ${escapeHtml(orderId)}</p><p><strong>Cliente:</strong> ${escapeHtml(customerName)}<br><strong>Correo:</strong> ${escapeHtml(email)}<br><strong>Teléfono:</strong> ${escapeHtml(customerPhone)}<br><strong>Dirección:</strong> ${escapeHtml(address)}<br><strong>Municipio:</strong> ${escapeHtml(municipality)}<br><strong>Departamento:</strong> ${escapeHtml(department)}</p><h2>Productos</h2><ul>${htmlItems}</ul><p><strong>Total:</strong> ${formatCurrency(total)}</p></div>`;
@@ -184,13 +196,42 @@ export const createOrderInputSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254).optional(),
   name: z.string().trim().max(100).optional(),
   saveAddress: z.boolean().default(false),
-  paymentMethod: z.literal("cash"),
+  confirmLivePayment: z.boolean().default(false),
+  paymentMethod: z.enum(["cash", "wompi"]),
 });
 
 export const orderRouter = createTRPCRouter({
+  getWompiAvailability: publicProcedure.query(() => getWompiAvailability()),
+
   createNew: publicProcedure
     .input(createOrderInputSchema)
     .mutation(async ({ ctx, input }) => {
+      let wompiConfig: WompiConfig | null = null;
+      let paymentStatusToken: string | null = null;
+      if (input.paymentMethod === "wompi") {
+        try {
+          wompiConfig = readWompiConfig();
+        } catch (error) {
+          if (error instanceof WompiConfigurationError) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: error.message,
+            });
+          }
+          throw error;
+        }
+        if (
+          !isLivePaymentConfirmationValid(wompiConfig, input.confirmLivePayment)
+        ) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Confirma que autorizas un cobro real antes de continuar con Wompi Producción.",
+          });
+        }
+        paymentStatusToken = createPaymentStatusToken();
+      }
+
       const session = ctx.session?.user;
       if (!session && !input.email) {
         throw new TRPCError({
@@ -252,6 +293,8 @@ export const orderRouter = createTRPCRouter({
           product,
           quantity: item.quantity,
           subtotal: product.price * item.quantity,
+          fulfillmentType: product.fulfillmentType,
+          leadTimeDays: product.leadTimeDays,
         };
       });
       const total = lines.reduce((sum, line) => sum + line.subtotal, 0);
@@ -301,13 +344,19 @@ export const orderRouter = createTRPCRouter({
                 menuItemId: line.product.id,
                 quantity: line.quantity,
                 subtotal: line.subtotal,
+                fulfillmentType: line.fulfillmentType,
+                leadTimeDays: line.leadTimeDays,
               })),
             },
             payment: {
               create: {
-                method: input.paymentMethod,
+                method: wompiConfig?.paymentMethod ?? "cash",
                 status: "PENDING",
                 amount: total,
+                wompiEnvironment: wompiConfig?.environment ?? null,
+                statusToken: paymentStatusToken
+                  ? digestPaymentStatusToken(paymentStatusToken)
+                  : null,
               },
             },
           },
@@ -350,7 +399,42 @@ export const orderRouter = createTRPCRouter({
         }),
       );
 
-      return { ...order, trackingUrl: customerTrackingUrl };
+      return {
+        ...order,
+        trackingUrl: customerTrackingUrl,
+        paymentMethod: input.paymentMethod,
+        wompiCheckout:
+          wompiConfig && paymentStatusToken
+            ? createWompiCheckoutData({
+                config: wompiConfig,
+                reference: order.id,
+                amount: order.total,
+                statusToken: paymentStatusToken,
+                customerEmail,
+                customerName: customerName ?? "Cliente",
+              })
+            : null,
+      };
+    }),
+
+  getWompiPaymentStatus: publicProcedure
+    .input(z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }))
+    .query(async ({ ctx, input }) => {
+      const payment = await ctx.db.payment.findUnique({
+        where: { statusToken: digestPaymentStatusToken(input.token) },
+        select: { method: true, status: true, wompiEnvironment: true },
+      });
+      if (
+        !payment ||
+        (payment.method !== "WOMPI_SANDBOX" &&
+          payment.method !== "WOMPI_PRODUCTION")
+      ) {
+        return null;
+      }
+      return {
+        status: payment.status,
+        environment: payment.wompiEnvironment,
+      };
     }),
 
   getGuestOrderTracking: publicProcedure
@@ -370,6 +454,8 @@ export const orderRouter = createTRPCRouter({
               id: true,
               quantity: true,
               subtotal: true,
+              fulfillmentType: true,
+              leadTimeDays: true,
               menuItem: { select: { name: true } },
             },
           },

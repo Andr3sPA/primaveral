@@ -279,10 +279,14 @@ export default function RegisterMenuItem() {
             name="leadTimeDays"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Días estimados de preparación</FormLabel>
+                <FormLabel>Días estimados de entrega</FormLabel>
                 <FormControl>
                   <Input {...field} type="number" min={0} max={365} />
                 </FormControl>
+                <p className="text-muted-foreground text-xs">
+                  Para productos por encargo, indica días calendario. Puedes
+                  configurar 30 días o más, hasta 365.
+                </p>
                 <FormMessage />
               </FormItem>
             )}

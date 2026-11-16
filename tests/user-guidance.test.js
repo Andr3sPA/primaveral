@@ -49,11 +49,14 @@ test("registration fields have visible labels and readable password guidance", a
   assert.match(source, /<p role="alert"[\s\S]*\{register\.error\.message\}/);
 });
 
-test("checkout only offers a working payment method", async () => {
+test("checkout offers cash and enables Wompi only for configured Sandbox", async () => {
   const source = await readSource("src/components/checkout.tsx");
 
-  assert.match(source, /paymentMethod: z\.literal\("cash"\)/);
+  assert.match(source, /paymentMethod: z\.enum\(\["cash", "wompi"\]\)/);
   assert.match(source, /Pago al recibir el pedido/);
+  assert.match(source, /Tarjeta o PSE con Wompi Sandbox/);
+  assert.match(source, /getWompiAvailability/);
+  assert.match(source, /Confirmo que este pago es real/);
   assert.doesNotMatch(source, /Tarjeta \(próximamente\)/);
 });
 
