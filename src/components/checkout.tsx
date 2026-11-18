@@ -12,6 +12,7 @@ import { z } from "zod";
 import { api } from "@/trpc/react";
 import { useCart } from "@/contexts/CartContext";
 import { formatCOP } from "@/lib/format-currency";
+import { WHATSAPP_CHAT_URL } from "@/lib/social-links";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import {
@@ -79,6 +80,7 @@ export function Checkout() {
     onSuccess: () => clearCart(),
   });
   const subtotal = getTotalPrice();
+  const paymentMethod = form.watch("paymentMethod");
   const profile = profileQuery.data;
   const hasSavedAddress = Boolean(
     profile?.address && profile.municipality && profile.department,
@@ -266,7 +268,7 @@ export function Checkout() {
   }
 
   return (
-    <main className="botanical-page mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
+    <main className="botanical-page mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
       <section>
         <button
           type="button"
@@ -516,12 +518,10 @@ export function Checkout() {
                       {wompiAvailability.data?.available &&
                         wompiAvailability.data.mode === "production" && (
                           <p className="rounded-lg bg-amber-50 p-3 text-base leading-6 text-amber-950">
-                            Estás en Producción: continuar inicia un pago con
-                            dinero real. Para probar sin cargos, usa una Preview
-                            configurada con llaves Sandbox.
+                            Si eliges Wompi, el pago se hará con dinero real.
                           </p>
                         )}
-                      {form.watch("paymentMethod") === "wompi" &&
+                      {paymentMethod === "wompi" &&
                         wompiAvailability.data?.available &&
                         wompiAvailability.data.mode === "production" && (
                           <label className="flex items-start gap-3 text-base leading-6 text-[#35203f]">
@@ -550,16 +550,28 @@ export function Checkout() {
                       {wompiAvailability.data &&
                         !wompiAvailability.data.available && (
                           <p className="text-base leading-6 text-[#514060]">
-                            Wompi no está habilitado:{" "}
-                            {wompiAvailability.data.reason} Pago al recibir
-                            sigue disponible.
+                            El pago en línea no está disponible en este momento.
+                            Puedes elegir «Pago al recibir el pedido».
                           </p>
                         )}
                       {wompiAvailability.error && (
-                        <p role="alert" className="text-sm text-red-700">
-                          No se pudo verificar la disponibilidad de Wompi.
-                          Recarga la página antes de elegir el método.
-                        </p>
+                        <div className="space-y-3">
+                          <p role="alert" className="text-base text-red-700">
+                            No pudimos comprobar el pago en línea. Puedes elegir
+                            «Pago al recibir el pedido» o volver a intentarlo.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="min-h-11 text-base whitespace-normal"
+                            disabled={wompiAvailability.isFetching}
+                            onClick={() => void wompiAvailability.refetch()}
+                          >
+                            {wompiAvailability.isFetching
+                              ? "Comprobando pago en línea..."
+                              : "Volver a comprobar el pago en línea"}
+                          </Button>
+                        </div>
                       )}
                       <FormMessage />
                     </FormItem>
@@ -582,6 +594,28 @@ export function Checkout() {
                     {createOrder.error.message}
                   </p>
                 )}
+                <div className="rounded-xl border border-[#d9c9df] bg-[#fbf6fa] p-4 text-base leading-6 text-[#35203f]">
+                  <p className="flex flex-wrap items-baseline justify-between gap-x-3 font-semibold">
+                    <span>
+                      {paymentMethod === "wompi"
+                        ? "Importe de los productos en Wompi"
+                        : "Total de productos"}
+                    </span>
+                    <span className="store-price">{formatCOP(subtotal)}</span>
+                  </p>
+                  <p className="mt-1 text-[#514060]">
+                    El envío se cobra por separado si aplica. Te confirmaremos
+                    el valor antes de enviar el pedido.
+                  </p>
+                  <a
+                    href={WHATSAPP_CHAT_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex min-h-11 items-center font-medium text-[#48235c] underline underline-offset-4"
+                  >
+                    Consultar costo de envío por WhatsApp
+                  </a>
+                </div>
                 <Button
                   type="submit"
                   disabled={
@@ -589,7 +623,7 @@ export function Checkout() {
                     !items.length ||
                     (isAuthenticated && profileQuery.isLoading)
                   }
-                  className="min-h-12 w-full rounded-full bg-[#48235c] text-base font-semibold text-white hover:bg-[#382047]"
+                  className="min-h-12 w-full rounded-full bg-[#48235c] px-4 py-3 text-base font-semibold whitespace-normal text-white hover:bg-[#382047]"
                 >
                   {createOrder.isPending ? (
                     <>
@@ -599,10 +633,10 @@ export function Checkout() {
                       />
                       Guardando pedido...
                     </>
-                  ) : form.watch("paymentMethod") === "wompi" ? (
+                  ) : paymentMethod === "wompi" ? (
                     "Preparar pedido y continuar al pago"
                   ) : (
-                    "Confirmar pedido"
+                    "Confirmar pedido contraentrega"
                   )}
                 </Button>
               </form>

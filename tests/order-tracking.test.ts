@@ -5,7 +5,11 @@ import {
   orderTrackingPath,
   verifyOrderTrackingAccessToken,
 } from "../src/server/orders/order-tracking";
-import { getAllowedOrderStatusTransitions } from "../src/lib/order-status";
+import {
+  canAdvanceOrder,
+  getAllowedOrderStatusTransitions,
+  getOrderPaymentLabels,
+} from "../src/lib/order-status";
 
 const orderId = "clx9a1b2c3d4e5f6g7h8i9j0k";
 const secret = "test-only-order-tracking-secret";
@@ -22,6 +26,39 @@ void test("only paid Wompi orders can advance toward fulfillment", () => {
   assert.deepEqual(
     getAllowedOrderStatusTransitions("PENDING", { ...payment, method: "cash" }),
     ["PREPARING", "CANCELLED"],
+  );
+});
+
+void test("the admin attention list excludes blocked and completed orders", () => {
+  const payment = { method: "WOMPI_SANDBOX", status: "PENDING" };
+  assert.equal(canAdvanceOrder({ status: "PENDING", payment }), false);
+  assert.equal(
+    canAdvanceOrder({
+      status: "PENDING",
+      payment: { ...payment, status: "FAILED" },
+    }),
+    false,
+  );
+  assert.equal(
+    canAdvanceOrder({
+      status: "PENDING",
+      payment: { ...payment, status: "PAID" },
+    }),
+    true,
+  );
+  assert.equal(
+    canAdvanceOrder({
+      status: "READY",
+      payment: { method: "cash", status: "PENDING" },
+    }),
+    true,
+  );
+  assert.equal(canAdvanceOrder({ status: "CANCELLED" }), false);
+  assert.equal(canAdvanceOrder({ status: "DELIVERED" }), false);
+  assert.equal(getOrderPaymentLabels(payment).method, "Wompi Sandbox (prueba)");
+  assert.equal(
+    getOrderPaymentLabels(null).status,
+    "Estado del pago sin registrar",
   );
 });
 

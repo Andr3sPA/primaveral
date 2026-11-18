@@ -42,22 +42,22 @@ export function DataTableViewOptions<TData>({
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          aria-label="Toggle columns"
+          aria-label="Elegir columnas visibles"
           role="combobox"
           variant="outline"
           size="sm"
-          className="ml-auto hidden h-8 lg:flex"
+          className="ml-auto hidden min-h-11 text-base lg:flex"
         >
           <Settings2 />
-          View
+          Columnas
           <ChevronsUpDown className="ml-auto opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-44 p-0">
         <Command>
-          <CommandInput placeholder="Search columns..." />
+          <CommandInput placeholder="Buscar columnas..." />
           <CommandList>
-            <CommandEmpty>No columns found.</CommandEmpty>
+            <CommandEmpty>No hay columnas con ese nombre.</CommandEmpty>
             <CommandGroup>
               {columns.map((column) => (
                 <CommandItem

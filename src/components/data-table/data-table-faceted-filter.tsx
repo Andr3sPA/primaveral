@@ -42,7 +42,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   const columnFilterValue = column?.getFilterValue();
   const selectedValues = React.useMemo(
     () => new Set(Array.isArray(columnFilterValue) ? columnFilterValue : []),
-    [columnFilterValue]
+    [columnFilterValue],
   );
 
   const onItemSelect = React.useCallback(
@@ -77,14 +77,25 @@ export function DataTableFacetedFilter<TData, TValue>({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="border-dashed">
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-11 border-dashed text-base"
+        >
           {selectedValues?.size > 0 ? (
             <div
               role="button"
-              aria-label={`Clear ${title} filter`}
+              aria-label={`Quitar filtro de ${title}`}
               tabIndex={0}
               onClick={onReset}
-              className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onReset();
+                }
+              }}
+              className="focus-visible:ring-ring rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:outline-none"
             >
               <XCircle />
             </div>
@@ -110,7 +121,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                     variant="secondary"
                     className="rounded-sm px-1 font-normal"
                   >
-                    {selectedValues.size} selected
+                    {selectedValues.size} seleccionados
                   </Badge>
                 ) : (
                   options
@@ -134,8 +145,8 @@ export function DataTableFacetedFilter<TData, TValue>({
         <Command>
           <CommandInput placeholder={title} />
           <CommandList className="max-h-full">
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup className="max-h-[18.75rem] overflow-y-auto overflow-x-hidden">
+            <CommandEmpty>No hay resultados.</CommandEmpty>
+            <CommandGroup className="max-h-[18.75rem] overflow-x-hidden overflow-y-auto">
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value);
 
@@ -143,10 +154,11 @@ export function DataTableFacetedFilter<TData, TValue>({
                   <CommandItem
                     key={option.value}
                     onSelect={() => onItemSelect(option, isSelected)}
+                    className="min-h-11 text-base"
                   >
                     <div
                       className={cn(
-                        "flex size-4 items-center justify-center rounded-sm border border-primary",
+                        "border-primary flex size-4 items-center justify-center rounded-sm border",
                         isSelected
                           ? "bg-primary"
                           : "opacity-50 [&_svg]:invisible",
@@ -155,7 +167,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                       <Check />
                     </div>
                     {option.icon && <option.icon />}
-                    <span className="truncate">{option.label}</span>
+                    <span>{option.label}</span>
                     {option.count && (
                       <span className="ml-auto font-mono text-xs">
                         {option.count}
@@ -173,7 +185,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                     onSelect={() => onReset()}
                     className="justify-center text-center"
                   >
-                    Clear filters
+                    Quitar filtro
                   </CommandItem>
                 </CommandGroup>
               </>

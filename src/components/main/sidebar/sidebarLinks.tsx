@@ -2,11 +2,8 @@ import ButtonLink from "@/components/main/buttonLink";
 import { Archive, TableProperties, UserRoundCog } from "lucide-react";
 import { auth } from "@/server/auth";
 
-const SharedLinks = [
-  { text: "Ordenes", link: "/orders/", icon: TableProperties },
-];
-
 const AdminLinks = [
+  { text: "Pedidos", link: "/orders/", icon: TableProperties },
   { text: "Usuarios", link: "/users/", icon: UserRoundCog },
   { text: "Inventario", link: "/menu/inventory/", icon: Archive },
 ];
@@ -24,12 +21,6 @@ export default async function SidebarLinks() {
             {item.text}
           </ButtonLink>
         ))}
-      {SharedLinks.map((item) => (
-        <ButtonLink key={item.link} href={item.link}>
-          <item.icon />
-          {item.text}
-        </ButtonLink>
-      ))}
     </div>
   );
 }

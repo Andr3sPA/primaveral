@@ -7,6 +7,24 @@ import { normalizeSearchText } from "../src/lib/normalize-search-text.js";
 const readSource = (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
+test("the public menu keeps administration links behind the admin role", async () => {
+  const [navigation, orders, adminLayout] = await Promise.all([
+    readSource("src/components/navbar-client.tsx"),
+    readSource("src/components/MyOrders.tsx"),
+    readSource("src/app/(administration)/layout.tsx"),
+  ]);
+  const menuLinks = navigation.split("const links = [")[1]?.split("];")[0];
+  assert.ok(menuLinks);
+  assert.doesNotMatch(menuLinks, /#coleccion/);
+  assert.match(
+    menuLinks,
+    /isAdmin\s*\?\s*\[[\s\S]*href: "\/menu\/inventory"[\s\S]*href: "\/admin"/,
+  );
+  assert.match(menuLinks, /href: "\/orders\/track"/);
+  assert.match(orders, /href="\/#coleccion">Explorar la colección/);
+  assert.match(adminLayout, /await requireAdmin\(\)/);
+});
+
 /** @param {string} hex */
 function relativeLuminance(hex) {
   const channels = [0, 2, 4].map((offset) =>

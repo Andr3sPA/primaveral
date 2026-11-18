@@ -1,21 +1,28 @@
 "use client";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DollarSign } from "lucide-react";
-import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs";
+import { parseAsBoolean, useQueryState } from "nuqs";
 import * as React from "react";
 import { useDataTable } from "@/hooks/use-data-table";
 import { api } from "@/trpc/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import TableErrorState from "@/components/TableErrorState";
 import TableLoadingState from "@/components/TableLoadingState";
-import TableWrapper from "@/components/TableWrapper";
 import OrderDetailsDialog from "./OrderDetailsDialog";
 import OrderStatusBadge from "./OrderStatusBadge";
 import OrderUserCell from "./OrderUserCell";
 import type { OrderStatus } from "@prisma/client";
 import { toast } from "sonner";
 import { formatCOP } from "@/lib/format-currency";
+import {
+  canAdvanceOrder,
+  getOrderPaymentLabels,
+  getOrderStatusLabel,
+} from "@/lib/order-status";
 
 interface Order {
   id: string;
@@ -28,6 +35,7 @@ interface Order {
   total: number;
   phone: string | null;
   address: string;
+  payment: { method: string; status: string } | null;
   user: {
     name: string | null;
     email: string;
@@ -35,9 +43,9 @@ interface Order {
 }
 
 export function OrdersTable() {
-  const [status] = useQueryState(
-    "status",
-    parseAsArrayOf(parseAsString).withDefault([]),
+  const [attention, setAttention] = useQueryState(
+    "attention",
+    parseAsBoolean.withDefault(false),
   );
 
   const utils = api.useUtils();
@@ -73,13 +81,10 @@ export function OrdersTable() {
     },
   });
 
-  const filteredData = React.useMemo(() => {
-    return orders.filter((order) => {
-      const matchesStatus =
-        status.length === 0 || status.includes(order.status);
-      return matchesStatus;
-    });
-  }, [status, orders]);
+  const filteredData = React.useMemo(
+    () => (attention ? orders.filter(canAdvanceOrder) : orders),
+    [attention, orders],
+  );
 
   const columns = React.useMemo<ColumnDef<Order>[]>(
     () => [
@@ -94,14 +99,14 @@ export function OrdersTable() {
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
             }
-            aria-label="Select all"
+            aria-label="Seleccionar todos los pedidos de esta página"
           />
         ),
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
+            aria-label="Seleccionar pedido"
           />
         ),
         size: 32,
@@ -159,9 +164,12 @@ export function OrdersTable() {
           const date = cell.getValue<Order["createdAt"]>();
           return (
             <div className="text-sm">
-              <div>{new Date(date).toLocaleDateString()}</div>
+              <div>{new Date(date).toLocaleDateString("es-CO")}</div>
               <div className="text-muted-foreground">
-                {new Date(date).toLocaleTimeString()}
+                {new Date(date).toLocaleTimeString("es-CO", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
               </div>
             </div>
           );
@@ -171,16 +179,26 @@ export function OrdersTable() {
         id: "status",
         accessorKey: "status",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Estado" />
+          <DataTableColumnHeader column={column} title="Estado del pedido" />
         ),
         cell: ({ cell }) => (
           <OrderStatusBadge status={cell.getValue<OrderStatus>()} />
         ),
         meta: {
-          label: "Estado",
+          label: "Estado del pedido",
           variant: "multiSelect",
+          options: (
+            ["PENDING", "PREPARING", "READY", "DELIVERED", "CANCELLED"] as const
+          ).map((value) => ({ value, label: getOrderStatusLabel(value) })),
         },
+        filterFn: (row, columnId, values: string[]) =>
+          values.includes(row.getValue<string>(columnId)),
         enableColumnFilter: true,
+      },
+      {
+        id: "payment",
+        header: "Pago",
+        cell: ({ row }) => <PaymentSummary payment={row.original.payment} />,
       },
       {
         id: "total",
@@ -214,12 +232,21 @@ export function OrdersTable() {
     data: filteredData,
     columns,
     pageCount: 1,
+    clientSide: true,
     initialState: {
       sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { right: ["actions"] },
     },
     getRowId: (row) => row.id,
   });
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
+
+  React.useEffect(() => {
+    if (!isLoading && (pageIndex < 0 || pageIndex >= Math.max(1, pageCount))) {
+      table.setPageIndex(0);
+    }
+  }, [isLoading, pageCount, pageIndex, table]);
 
   if (isLoading) {
     return <TableLoadingState message="Cargando pedidos..." />;
@@ -231,5 +258,74 @@ export function OrdersTable() {
     );
   }
 
-  return <TableWrapper table={table} />;
+  const rows = table.getRowModel().rows;
+  return (
+    <div className="data-table-container">
+      <DataTable
+        table={table}
+        compactView={
+          rows.length ? (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {rows.map(({ original: order }) => (
+                <li
+                  key={order.id}
+                  className="min-w-0 space-y-3 rounded-lg border p-4 text-base break-words"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <strong>
+                      {order.guestName ??
+                        order.user?.name ??
+                        "Cliente sin nombre"}
+                    </strong>
+                    <OrderStatusBadge status={order.status} />
+                  </div>
+                  <PaymentSummary payment={order.payment} />
+                  <p className="text-muted-foreground">
+                    {new Date(order.createdAt).toLocaleDateString("es-CO")}
+                  </p>
+                  <p className="font-semibold">
+                    Total de productos {formatCOP(order.total)}
+                  </p>
+                  <OrderDetailsDialog orderId={order.id} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p role="status" className="rounded-lg border p-4">
+              No hay pedidos con estos filtros.
+            </p>
+          )
+        }
+      >
+        <Button
+          type="button"
+          aria-pressed={attention}
+          variant={attention ? "default" : "outline"}
+          className="min-h-11 self-start text-base whitespace-normal"
+          onClick={() => {
+            table.setPageIndex(0);
+            void setAttention(!attention);
+          }}
+        >
+          Solo pedidos por atender
+        </Button>
+        {attention && (
+          <p className="text-muted-foreground text-base">
+            Pedidos que puedes preparar, alistar o marcar como entregados.
+          </p>
+        )}
+        <DataTableToolbar table={table} />
+      </DataTable>
+    </div>
+  );
+}
+
+function PaymentSummary({ payment }: { payment: Order["payment"] }) {
+  const { method, status } = getOrderPaymentLabels(payment);
+  return (
+    <div className="text-base">
+      <p className="font-medium">{status}</p>
+      <p className="text-muted-foreground">{method}</p>
+    </div>
+  );
 }

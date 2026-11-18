@@ -7,10 +7,10 @@ import TableDescription from "@/components/TableDescription";
 export default function OrdersPage() {
   // Renderiza la interfaz principal de gestión de pedidos
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto px-4 py-6 sm:px-6">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <ReturnButton />
             <TableTitle title="Gestión de Pedidos" />
           </div>

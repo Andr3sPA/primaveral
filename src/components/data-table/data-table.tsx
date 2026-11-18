@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 interface DataTableProps<TData> extends React.ComponentProps<"div"> {
   table: TanstackTable<TData>;
   actionBar?: React.ReactNode;
+  compactView?: React.ReactNode;
 }
 
 export function DataTable<TData>({
   table,
   actionBar,
+  compactView,
   children,
   className,
   ...props
@@ -31,7 +33,13 @@ export function DataTable<TData>({
       {...props}
     >
       {children}
-      <div className="min-w-0 overflow-hidden rounded-md border">
+      {compactView && <div className="lg:hidden">{compactView}</div>}
+      <div
+        className={cn(
+          "min-w-0 overflow-hidden rounded-md border",
+          compactView && "hidden lg:block",
+        )}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -83,7 +91,7 @@ export function DataTable<TData>({
                   colSpan={table.getAllColumns().length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No hay resultados.
                 </TableCell>
               </TableRow>
             )}

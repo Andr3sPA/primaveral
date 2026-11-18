@@ -24,6 +24,7 @@ import { type OrderStatus } from "@prisma/client";
 import OrderItemsList from "./OrderItemsList";
 import {
   getAllowedOrderStatusTransitions,
+  getOrderPaymentLabels,
   getOrderStatusLabel,
 } from "@/lib/order-status";
 import { formatCOP } from "@/lib/format-currency";
@@ -31,6 +32,7 @@ import { formatCOP } from "@/lib/format-currency";
 // Componente para mostrar el diálogo con los detalles de un pedido y permitir actualizar su estado
 export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
   const [open, setOpen] = React.useState(false);
+  const statusInputId = React.useId();
   const [selectedStatus, setSelectedStatus] = React.useState<OrderStatus | "">(
     "",
   );
@@ -84,31 +86,32 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
         ),
       ]
     : [];
+  const paymentLabels = getOrderPaymentLabels(orderDetails?.payment);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" className="min-h-11 text-base">
           <Eye className="mr-2 h-4 w-4" />
-          Detalles
+          Ver pedido
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Detalles del Pedido</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-h-[90dvh] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-2xl [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2 [&_[data-slot=dialog-close]]:grid [&_[data-slot=dialog-close]]:size-11 [&_[data-slot=dialog-close]]:place-items-center">
+        <DialogHeader className="pr-9">
+          <DialogTitle className="text-xl">Detalles del pedido</DialogTitle>
+          <DialogDescription className="text-base break-words">
             Información completa del pedido #{orderId}
           </DialogDescription>
         </DialogHeader>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div role="status" className="flex items-center justify-center py-8">
             <div className="text-muted-foreground">Cargando detalles...</div>
           </div>
         ) : orderDetails ? (
           <div className="space-y-6">
             <div>
-              <h3 className="mb-2 font-semibold">Información del Cliente</h3>
-              <div className="space-y-1 text-sm">
+              <h3 className="mb-2 text-lg font-semibold">Datos del cliente</h3>
+              <div className="space-y-2 text-base break-words">
                 <p>
                   <span className="font-medium">Nombre:</span>{" "}
                   {orderDetails.guestName ??
@@ -116,7 +119,7 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                     "Sin nombre"}
                 </p>
                 <p>
-                  <span className="font-medium">Email:</span>{" "}
+                  <span className="font-medium">Correo electrónico:</span>{" "}
                   {orderDetails.guestEmail ??
                     orderDetails.user?.email ??
                     "Sin correo"}
@@ -141,16 +144,19 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
             </div>
             <Separator />
             <div>
-              <h3 className="mb-2 font-semibold">Items del Pedido</h3>
+              <h3 className="mb-2 text-lg font-semibold">
+                Productos del pedido
+              </h3>
               <OrderItemsList items={orderDetails.orderItems} />
             </div>
             <Separator />
             {orderDetails.payment?.method === "cash" &&
-              orderDetails.payment.status === "PENDING" && (
+              orderDetails.payment.status === "PENDING" &&
+              orderDetails.status !== "CANCELLED" && (
                 <Button
                   type="button"
                   size="lg"
-                  className="min-h-12"
+                  className="min-h-12 w-full text-base sm:w-auto"
                   disabled={isConfirmingCashPayment}
                   onClick={() => confirmCashPayment({ orderId })}
                 >
@@ -160,33 +166,27 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                 </Button>
               )}
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="grid min-w-0 gap-6">
               <div>
                 <p className="text-lg font-semibold">
                   Total: {formatCOP(orderDetails.total)}
                 </p>
-                <p className="text-sm">
-                  Pago:{" "}
-                  {orderDetails.payment?.method === "WOMPI_SANDBOX"
-                    ? "Wompi Sandbox"
-                    : orderDetails.payment?.method === "WOMPI_PRODUCTION"
-                      ? "Wompi Producción"
-                      : "Pago al recibir"}
-                  {" · "}
-                  {orderDetails.payment?.status === "PAID"
-                    ? "Aprobado"
-                    : orderDetails.payment?.status === "FAILED"
-                      ? "No aprobado"
-                      : "Pendiente"}
+                <p className="text-base">
+                  {paymentLabels.status} · {paymentLabels.method}
                 </p>
-                <p className="text-muted-foreground text-sm">
-                  Fecha: {new Date(orderDetails.createdAt).toLocaleString()}
+                <p className="text-muted-foreground text-base">
+                  Fecha:{" "}
+                  {new Date(orderDetails.createdAt).toLocaleString("es-CO", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Estado del Pedido:
-                </label>
+                <p className="text-base">
+                  Estado actual:{" "}
+                  <strong>{getOrderStatusLabel(orderDetails.status)}</strong>
+                </p>
                 {selectedStatus === "CANCELLED" &&
                   orderDetails.payment?.status === "PAID" && (
                     <p
@@ -197,36 +197,52 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                       del dinero por separado antes de cerrar este pedido.
                     </p>
                   )}
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedStatus}
-                    onValueChange={(value) =>
-                      setSelectedStatus(value as OrderStatus | "")
-                    }
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectableStatuses.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {getOrderStatusLabel(status)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={handleStatusUpdate}
-                    disabled={
-                      isPending || selectedStatus === orderDetails.status
-                    }
-                    size="sm"
-                  >
-                    {isPending ? "Actualizando..." : "Actualizar"}
-                  </Button>
-                </div>
-                {selectableStatuses.length === 1 && (
-                  <p className="text-muted-foreground text-sm">
+                {selectableStatuses.length > 1 ? (
+                  <div className="grid gap-3">
+                    <label
+                      htmlFor={statusInputId}
+                      className="text-base font-medium"
+                    >
+                      Elegir nuevo estado
+                    </label>
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={(value) =>
+                        setSelectedStatus(value as OrderStatus | "")
+                      }
+                    >
+                      <SelectTrigger
+                        id={statusInputId}
+                        className="min-h-11 w-full text-base"
+                      >
+                        <SelectValue placeholder="Seleccionar estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectableStatuses.map((status) => (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            className="min-h-11 text-base"
+                          >
+                            {getOrderStatusLabel(status)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleStatusUpdate}
+                      disabled={
+                        isPending || selectedStatus === orderDetails.status
+                      }
+                      className="min-h-11 w-full text-base sm:w-fit"
+                    >
+                      {isPending
+                        ? "Guardando estado..."
+                        : "Guardar estado del pedido"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-base">
                     Este pedido ya no admite cambios de estado.
                   </p>
                 )}

@@ -11,10 +11,12 @@ import {
 } from "lucide-react";
 import { api } from "@/trpc/react";
 import { Card, CardContent } from "@/components/ui/card";
+import { canAdvanceOrder } from "@/lib/order-status";
 
 export default function AdminPage() {
   const { data: products = [], isLoading } = api.menu.getMenuItems.useQuery();
-  const { data: orders = [] } = api.order.getOrders.useQuery();
+  const { data: orders } = api.order.getOrders.useQuery();
+  const attentionCount = orders?.filter(canAdvanceOrder).length;
   const stock = products.reduce((sum, product) => sum + product.stock, 0);
   const sections = [
     {
@@ -36,7 +38,7 @@ export default function AdminPage() {
       icon: ShoppingBag,
       title: "Pedidos",
       description: "Revisa y actualiza pedidos",
-      value: `${orders.length} pedidos`,
+      value: orders ? `${orders.length} pedidos` : "Ver pedidos",
     },
     {
       href: "/admin/social",
@@ -74,6 +76,16 @@ export default function AdminPage() {
           Ver tienda →
         </Link>
       </div>
+      {attentionCount !== undefined && attentionCount > 0 && (
+        <Link
+          href="/orders?attention=true"
+          className="mt-6 inline-flex min-h-12 items-center rounded-lg border border-stone-400 px-4 py-2 text-base font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-4"
+        >
+          {attentionCount === 1
+            ? "Ver 1 pedido por atender"
+            : `Ver ${attentionCount} pedidos por atender`}
+        </Link>
+      )}
       <div className="mt-10 grid gap-5 sm:grid-cols-2">
         {sections.map(({ href, icon: Icon, title, description, value }) => (
           <Link href={href} key={href}>
@@ -84,11 +96,14 @@ export default function AdminPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="font-medium">{title}</h2>
-                    <ChevronRight className="h-4 w-4 text-stone-400" />
+                    <h2 className="text-lg font-semibold">{title}</h2>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-stone-500"
+                    />
                   </div>
-                  <p className="mt-1 text-sm text-stone-500">{description}</p>
-                  <p className="mt-5 text-sm font-medium text-stone-900">
+                  <p className="mt-1 text-base text-stone-700">{description}</p>
+                  <p className="mt-5 text-base font-medium text-stone-900">
                     {value}
                   </p>
                 </div>

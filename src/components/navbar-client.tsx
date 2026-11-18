@@ -23,10 +23,14 @@ export function NavbarClient() {
   const isAdmin = session?.user?.role === "ADMIN";
   const links = [
     { href: "/", label: "Inicio" },
-    { href: "/#coleccion", label: "Catálogo" },
     { href: "/orders/track", label: "Seguir pedido" },
     { href: "/#contacto", label: "Contacto" },
-    ...(isAdmin ? [{ href: "/admin", label: "Administración" }] : []),
+    ...(isAdmin
+      ? [
+          { href: "/menu/inventory", label: "Administrar catálogo" },
+          { href: "/admin", label: "Administración" },
+        ]
+      : []),
   ];
 
   return (
@@ -53,6 +57,7 @@ export function NavbarClient() {
             <Link
               key={link.href}
               href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
               className={`flex min-h-11 items-center text-base transition hover:text-[#48235c] ${pathname === link.href ? "font-semibold text-[#48235c]" : "text-[#514060]"}`}
             >
               {link.label}
@@ -70,7 +75,7 @@ export function NavbarClient() {
             className="relative flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-2 text-[#48235c] transition hover:bg-[#f5eaf4] sm:px-3"
           >
             <ShoppingBag className="h-5 w-5" aria-hidden="true" />
-            <span className="hidden text-base sm:inline">Carrito</span>
+            <span className="text-base">Carrito</span>
             {getItemCount() > 0 && (
               <span
                 aria-hidden="true"

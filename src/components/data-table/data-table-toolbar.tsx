@@ -49,14 +49,14 @@ export function DataTableToolbar<TData>({
         ))}
         {isFiltered && (
           <Button
-            aria-label="Reset filters"
+            aria-label="Quitar filtros de la tabla"
             variant="outline"
             size="sm"
-            className="border-dashed"
+            className="min-h-11 border-dashed text-base"
             onClick={onReset}
           >
             <X />
-            Reset
+            Quitar filtros
           </Button>
         )}
       </div>
@@ -84,10 +84,11 @@ function DataTableToolbarFilter<TData>({
         case "text":
           return (
             <Input
+              aria-label={columnMeta.label}
               placeholder={columnMeta.placeholder ?? columnMeta.label}
               value={(column.getFilterValue() as string) ?? ""}
               onChange={(event) => column.setFilterValue(event.target.value)}
-              className="h-8 w-40 lg:w-56"
+              className="min-h-11 w-40 text-base lg:w-56"
             />
           );
 
@@ -103,7 +104,7 @@ function DataTableToolbarFilter<TData>({
                 className={cn("h-8 w-[120px]", columnMeta.unit && "pr-8")}
               />
               {columnMeta.unit && (
-                <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-muted-foreground text-sm">
+                <span className="bg-accent text-muted-foreground absolute top-0 right-0 bottom-0 flex items-center rounded-r-md px-2 text-sm">
                   {columnMeta.unit}
                 </span>
               )}

@@ -59,6 +59,7 @@ interface UseDataTableProps<TData>
   throttleMs?: number;
   clearOnDefault?: boolean;
   enableAdvancedFilter?: boolean;
+  clientSide?: boolean;
   scroll?: boolean;
   shallow?: boolean;
   startTransition?: React.TransitionStartFunction;
@@ -74,6 +75,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     throttleMs = THROTTLE_MS,
     clearOnDefault = false,
     enableAdvancedFilter = false,
+    clientSide = false,
     scroll = false,
     shallow = true,
     startTransition,
@@ -214,14 +216,14 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
 
           filters.push({
             id: key,
-            value: processedValue,
+            value: clientSide ? value : processedValue,
           });
         }
         return filters;
       },
       [],
     );
-  }, [filterValues, enableAdvancedFilter]);
+  }, [filterValues, enableAdvancedFilter, clientSide]);
 
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(initialColumnFilters);
@@ -262,7 +264,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     ...tableProps,
     columns,
     initialState,
-    pageCount,
+    pageCount: clientSide ? undefined : pageCount,
     state: {
       pagination,
       sorting,
@@ -287,9 +289,10 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    manualPagination: true,
-    manualSorting: true,
-    manualFiltering: true,
+    manualPagination: !clientSide,
+    manualSorting: !clientSide,
+    manualFiltering: !clientSide,
+    autoResetPageIndex: clientSide ? false : tableProps.autoResetPageIndex,
   });
 
   return { table, shallow, debounceMs, throttleMs };
