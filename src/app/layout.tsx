@@ -2,7 +2,7 @@
 import "@/styles/globals.css";
 
 import { type Metadata } from "next";
-import { DM_Sans, Cormorant_Garamond } from "next/font/google";
+import localFont from "next/font/local";
 
 import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/sonner";
@@ -21,15 +21,17 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const sans = DM_Sans({
-  subsets: ["latin"],
+const sans = localFont({
+  src: "./fonts/dm-sans.woff2",
   variable: "--font-body",
+  weight: "100 1000",
 });
 
-const display = Cormorant_Garamond({
-  subsets: ["latin"],
+const display = localFont({
+  src: "./fonts/cormorant-garamond.woff2",
   variable: "--font-display",
-  weight: ["500", "600", "700"],
+  weight: "300 700",
+  adjustFontFallback: "Times New Roman",
 });
 
 export default function RootLayout({

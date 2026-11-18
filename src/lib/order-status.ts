@@ -20,6 +20,17 @@ export function getOrderStatusLabel(status: OrderStatus) {
   return ORDER_STATUS_LABELS[status];
 }
 
-export function getAllowedOrderStatusTransitions(status: OrderStatus) {
-  return ORDER_STATUS_TRANSITIONS[status];
+export function getAllowedOrderStatusTransitions(
+  status: OrderStatus,
+  payment?: { method: string; status: string } | null,
+) {
+  const transitions = ORDER_STATUS_TRANSITIONS[status];
+  if (
+    (payment?.method === "WOMPI_SANDBOX" ||
+      payment?.method === "WOMPI_PRODUCTION") &&
+    payment.status !== "PAID"
+  ) {
+    return transitions.filter((nextStatus) => nextStatus === "CANCELLED");
+  }
+  return transitions;
 }

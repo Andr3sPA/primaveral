@@ -7,7 +7,11 @@ export type WompiEnvironment = "test" | "prod";
 export type WompiMode = "sandbox" | "production";
 
 const wompiTransactionSchema = z.object({
-  id: z.string().min(1).max(100),
+  id: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[A-Za-z0-9_-]+$/),
   reference: z.string().min(1).max(255),
   amount_in_cents: z.number().int().positive().safe(),
   currency: z.literal("COP"),
@@ -26,6 +30,7 @@ export type WompiConfig = {
   environment: WompiEnvironment;
   paymentMethod: "WOMPI_SANDBOX" | "WOMPI_PRODUCTION";
   publicKey: string;
+  privateKey: string;
   eventsSecret: string;
   integritySecret: string;
   redirectUrl: URL;
@@ -97,6 +102,7 @@ export function readWompiConfig(
 ): WompiConfig {
   const values = {
     WOMPI_LLAVE_PUBLICA: source.WOMPI_LLAVE_PUBLICA?.trim(),
+    WOMPI_LLAVE_PRIVADA: source.WOMPI_LLAVE_PRIVADA?.trim(),
     WOMPI_EVENTOS: source.WOMPI_EVENTOS?.trim(),
     WOMPI_INTEGRIDAD: source.WOMPI_INTEGRIDAD?.trim(),
     WOMPI_REDIRECT_URL: source.WOMPI_REDIRECT_URL?.trim(),
@@ -112,10 +118,12 @@ export function readWompiConfig(
 
   const sandbox =
     values.WOMPI_LLAVE_PUBLICA!.startsWith("pub_test_") &&
+    values.WOMPI_LLAVE_PRIVADA!.startsWith("prv_test_") &&
     values.WOMPI_EVENTOS!.startsWith("test_events_") &&
     values.WOMPI_INTEGRIDAD!.startsWith("test_integrity_");
   const production =
     values.WOMPI_LLAVE_PUBLICA!.startsWith("pub_prod_") &&
+    values.WOMPI_LLAVE_PRIVADA!.startsWith("prv_prod_") &&
     values.WOMPI_EVENTOS!.startsWith("prod_events_") &&
     values.WOMPI_INTEGRIDAD!.startsWith("prod_integrity_");
   if (!sandbox && !production) {
@@ -187,6 +195,7 @@ export function readWompiConfig(
     environment,
     paymentMethod: production ? "WOMPI_PRODUCTION" : "WOMPI_SANDBOX",
     publicKey: values.WOMPI_LLAVE_PUBLICA!,
+    privateKey: values.WOMPI_LLAVE_PRIVADA!,
     eventsSecret: values.WOMPI_EVENTOS!,
     integritySecret: values.WOMPI_INTEGRIDAD!,
     redirectUrl,
@@ -298,7 +307,10 @@ export function verifyWompiEventSignature(
   eventsSecret: string,
 ) {
   const checksum = event.signature.checksum.toLowerCase();
-  if (!headerChecksum || headerChecksum.trim().toLowerCase() !== checksum) {
+  if (
+    headerChecksum !== null &&
+    headerChecksum.trim().toLowerCase() !== checksum
+  ) {
     return false;
   }
   const values = event.signature.properties.map((property) =>
@@ -320,6 +332,35 @@ export function parseWompiEvent(value: unknown) {
 
 export function parseWompiTransaction(value: unknown) {
   return wompiTransactionSchema.safeParse(value);
+}
+
+export async function fetchWompiTransaction(
+  config: WompiConfig,
+  transactionId: string,
+  request: typeof fetch = fetch,
+) {
+  const origin =
+    config.environment === "test"
+      ? "https://sandbox.wompi.co"
+      : "https://production.wompi.co";
+  const response = await request(
+    `${origin}/v1/transactions/${encodeURIComponent(transactionId)}`,
+    {
+      headers: { Authorization: `Bearer ${config.privateKey}` },
+      cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(8000),
+    },
+  );
+  if (!response.ok) throw new Error("Wompi no pudo consultar la transacción.");
+
+  const result = z
+    .object({ data: wompiTransactionSchema })
+    .safeParse(await response.json());
+  if (!result.success || result.data.data.id !== transactionId) {
+    throw new Error("Wompi devolvió una transacción inválida.");
+  }
+  return result.data.data;
 }
 
 export async function applyWompiTransactionUpdate(

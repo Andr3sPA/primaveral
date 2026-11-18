@@ -10,6 +10,21 @@ import { getAllowedOrderStatusTransitions } from "../src/lib/order-status";
 const orderId = "clx9a1b2c3d4e5f6g7h8i9j0k";
 const secret = "test-only-order-tracking-secret";
 
+void test("only paid Wompi orders can advance toward fulfillment", () => {
+  const payment = { method: "WOMPI_SANDBOX", status: "PENDING" };
+  assert.deepEqual(getAllowedOrderStatusTransitions("PENDING", payment), [
+    "CANCELLED",
+  ]);
+  assert.deepEqual(
+    getAllowedOrderStatusTransitions("PENDING", { ...payment, status: "PAID" }),
+    ["PREPARING", "CANCELLED"],
+  );
+  assert.deepEqual(
+    getAllowedOrderStatusTransitions("PENDING", { ...payment, method: "cash" }),
+    ["PREPARING", "CANCELLED"],
+  );
+});
+
 void test("public tracking links are signed, tamper resistant, and keep a direct route", () => {
   const token = createOrderTrackingAccessToken(orderId, secret);
 

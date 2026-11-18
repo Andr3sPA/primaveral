@@ -263,7 +263,6 @@ export async function processDuePublications(db: PrismaClient) {
       if (container.status_code === "PUBLISHED") {
         await updateClaimed(db, job.id, leaseToken, {
           status: ProductPublicationStatus.PUBLISHED,
-          externalPostId: job.externalContainerId,
           publishedAt: new Date(),
           lastErrorCode: null,
           lastErrorMessage: null,

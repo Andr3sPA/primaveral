@@ -43,7 +43,8 @@ Para probar sin cargos:
 
 1. Crea una **Preview** HTTPS y una base de datos de prueba aislada. En las
    variables de entorno de Preview configura `WOMPI_LLAVE_PUBLICA` con prefijo
-   `pub_test_`, `WOMPI_EVENTOS` con `test_events_`, `WOMPI_INTEGRIDAD` con
+   `pub_test_`, `WOMPI_LLAVE_PRIVADA` con `prv_test_`, `WOMPI_EVENTOS`
+   con `test_events_`, `WOMPI_INTEGRIDAD` con
    `test_integrity_` y `WOMPI_REDIRECT_URL` con la URL absoluta
    `https://<tu-preview>/checkout/resultado`. No configures llaves `*_prod_*`.
 2. Despliega la Preview y aplica las migraciones a esa base aislada con
@@ -55,7 +56,7 @@ Para probar sin cargos:
    desplegar la Preview si las modificaste.
 4. En la Preview, inicia un checkout y selecciona “Tarjeta o PSE con Wompi
    Sandbox”. Pulsa “Ir al checkout de Wompi Sandbox” y usa solo los datos de
-   prueba vigentes en la [documentación oficial de Wompi](https://docs.wompi.co/docs/colombia/datos-para-pruebas/).
+   prueba vigentes en la [documentación oficial de Wompi](https://docs.wompi.co/docs/colombia/datos-de-prueba-en-sandbox/).
    Por ejemplo, la documentación publica `4242 4242 4242 4242` para aprobado
    y `4111 1111 1111 1111` para declinado; usa una fecha futura y el CVC de
    prueba indicado allí. Nunca ingreses una tarjeta real.
@@ -71,7 +72,7 @@ correo, seguimiento público, cambios de estado y pago rechazado— sigue la
 prueba con llaves de Producción ni uses una base de Producción.
 
 Para aceptar pagos reales, configura las llaves con prefijos `pub_prod_`,
-`prod_events_` y `prod_integrity_` **solo** en el entorno Vercel `Production`.
+`prv_prod_`, `prod_events_` y `prod_integrity_` **solo** en el entorno Vercel `Production`.
 También configura `WOMPI_LIVE_PAYMENTS_ENABLED=true`, `APP_URL` como el origen
 HTTPS canónico de producción y `WOMPI_REDIRECT_URL` como
 `<APP_URL>/checkout/resultado`. La aplicación rechaza llaves live en Preview o
@@ -80,7 +81,9 @@ local, aun si el interruptor live está presente. Registra
 con `transaction.updated`. No copies secretos live a Preview/local.
 
 El endpoint es `POST /api/wompi/events`; el retorno configurado es
-`/checkout/resultado`. `WOMPI_LLAVE_PRIVADA` no se usa con este Web Checkout.
+`/checkout/resultado`. Una vez validada la firma del evento, el servidor usa
+`WOMPI_LLAVE_PRIVADA` para consultar la transacción y verificar la referencia
+del pedido antes de actualizar el pago.
 Las pruebas automatizadas son mockeadas y no hacen solicitudes a Wompi. No se
 hizo ninguna transacción Sandbox ni real desde este entorno. Sigue las guías
 oficiales sobre [ambientes y llaves](https://docs.wompi.co/docs/colombia/ambientes-y-llaves/)

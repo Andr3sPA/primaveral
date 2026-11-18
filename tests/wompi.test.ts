@@ -5,6 +5,7 @@ import {
   applyWompiTransactionUpdate,
   createWompiCheckoutData,
   digestPaymentStatusToken,
+  fetchWompiTransaction,
   isLivePaymentConfirmationValid,
   parseWompiEvent,
   readWompiConfig,
@@ -16,12 +17,14 @@ import {
 const eventsSecret = "test_events_example";
 const sandboxEnv = {
   WOMPI_LLAVE_PUBLICA: "pub_test_example",
+  WOMPI_LLAVE_PRIVADA: "prv_test_example",
   WOMPI_EVENTOS: eventsSecret,
   WOMPI_INTEGRIDAD: "test_integrity_example",
   WOMPI_REDIRECT_URL: "https://preview.example.test/checkout/resultado",
 };
 const productionEnv = {
   WOMPI_LLAVE_PUBLICA: "pub_prod_example",
+  WOMPI_LLAVE_PRIVADA: "prv_prod_example",
   WOMPI_EVENTOS: "prod_events_example",
   WOMPI_INTEGRIDAD: "prod_integrity_example",
   WOMPI_REDIRECT_URL: "https://shop.example.test/checkout/resultado",
@@ -170,6 +173,10 @@ test("event signatures are checked against the signed properties and timestamp",
     verifyWompiEventSignature(parsedEvent.data, "0".repeat(64), eventsSecret),
     false,
   );
+  assert.equal(
+    verifyWompiEventSignature(parsedEvent.data, null, eventsSecret),
+    true,
+  );
 
   const tampered = parseWompiEvent({
     ...event,
@@ -185,6 +192,31 @@ test("event signatures are checked against the signed properties and timestamp",
         eventsSecret,
       ),
     false,
+  );
+});
+
+test("the authenticated Sandbox lookup returns Wompi's order reference", async () => {
+  const config = readWompiConfig(sandboxEnv);
+  const transaction = createSignedEvent().data.transaction;
+  const result = await fetchWompiTransaction(
+    config,
+    transaction.id,
+    async (url, options) => {
+      assert.equal(url, "https://sandbox.wompi.co/v1/transactions/wompi-tx-1");
+      assert.equal(
+        new Headers(options?.headers).get("Authorization"),
+        "Bearer prv_test_example",
+      );
+      assert.equal(options?.cache, "no-store");
+      return Response.json({ data: transaction });
+    },
+  );
+  assert.deepEqual(result, transaction);
+  await assert.rejects(
+    fetchWompiTransaction(config, transaction.id, async () =>
+      Response.json({ data: { ...transaction, id: "another-id" } }),
+    ),
+    /transacción inválida/,
   );
 });
 

@@ -20,7 +20,8 @@ Producción. Esta prueba no se ha ejecutado desde esta sesión.
    vuelve a desplegar esa Preview para que las tome. La configuración actual de
    Production/live no se ha verificado ni se debe dar por lista.
 4. Configura únicamente credenciales Sandbox de Wompi:
-   `WOMPI_LLAVE_PUBLICA` con prefijo `pub_test_`, `WOMPI_EVENTOS` con
+   `WOMPI_LLAVE_PUBLICA` con prefijo `pub_test_`, `WOMPI_LLAVE_PRIVADA`
+   con `prv_test_`, `WOMPI_EVENTOS` con
    `test_events_`, y `WOMPI_INTEGRIDAD` con `test_integrity_`, en el mismo
    entorno Vercel de la Preview. No habilites pagos reales. No copies secretos
    en chats, capturas, comandos o registros.
@@ -42,7 +43,7 @@ Producción. Esta prueba no se ha ejecutado desde esta sesión.
 **Detente** si el checkout muestra “Producción”, si el destino no es la Preview,
 si Wompi no está en Sandbox o si no puedes confirmar que la base es de prueba.
 No ingreses datos de tarjetas reales. Usa únicamente los datos vigentes de la
-[documentación de pruebas de Wompi](https://docs.wompi.co/docs/colombia/datos-para-pruebas/).
+[documentación de pruebas de Wompi](https://docs.wompi.co/docs/colombia/datos-de-prueba-en-sandbox/).
 
 ## 2. Compra de invitado con pago aprobado
 

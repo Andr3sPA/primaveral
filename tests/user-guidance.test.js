@@ -130,7 +130,8 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   assert.match(source, /text-white/);
   assert.match(source, /búsqueda/);
   assert.match(layout, /lang="es"/);
-  assert.match(layout, /subsets: \["latin"\]/);
+  assert.match(layout, /src: "\.\/fonts\/dm-sans\.woff2"/);
+  assert.match(layout, /src: "\.\/fonts\/cormorant-garamond\.woff2"/);
   assert.match(page, /<Menu\s*\/>/);
   assert.doesNotMatch(page, /<main/);
 

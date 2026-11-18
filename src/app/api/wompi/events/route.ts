@@ -1,5 +1,6 @@
 import {
   applyWompiTransactionUpdate,
+  fetchWompiTransaction,
   parseWompiEvent,
   parseWompiTransaction,
   readWompiConfig,
@@ -91,6 +92,29 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (!event.signature.properties.includes("transaction.id")) {
+    return Response.json(
+      {
+        error: "El evento no incluye un identificador de transacción firmado.",
+      },
+      { status: 401 },
+    );
+  }
+  let transaction;
+  try {
+    transaction = await fetchWompiTransaction(
+      config,
+      parsedTransaction.data.id,
+    );
+  } catch {
+    console.error(
+      `No se pudo verificar la transacción con Wompi ${config.mode}.`,
+    );
+    return Response.json(
+      { error: "No se pudo verificar la transacción con Wompi." },
+      { status: 503 },
+    );
+  }
   const database: WompiPaymentDatabase = {
     findPaymentByReference: (reference) =>
       db.payment.findUnique({
@@ -109,12 +133,12 @@ export async function POST(request: Request) {
   };
   const result = await applyWompiTransactionUpdate(
     database,
-    parsedTransaction.data,
+    transaction,
     config.environment,
   );
-  if (result === "updated" && parsedTransaction.data.status !== "PENDING") {
+  if (result === "updated" && transaction.status !== "PENDING") {
     const order = await db.order.findUnique({
-      where: { id: parsedTransaction.data.reference },
+      where: { id: transaction.reference },
       select: {
         guestEmail: true,
         user: { select: { email: true } },
@@ -124,9 +148,8 @@ export async function POST(request: Request) {
     if (email) {
       await sendOrderEmailSafely("la actualización del pago", () =>
         sendOrderPaymentNotification({
-          orderId: parsedTransaction.data.reference,
-          status:
-            parsedTransaction.data.status === "APPROVED" ? "PAID" : "FAILED",
+          orderId: transaction.reference,
+          status: transaction.status === "APPROVED" ? "PAID" : "FAILED",
           email,
         }),
       );

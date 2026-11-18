@@ -485,7 +485,13 @@ export const orderRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const currentOrder = await ctx.db.order.findUnique({
         where: { id: input.orderId },
-        select: { id: true, status: true, guestEmail: true, userId: true },
+        select: {
+          id: true,
+          status: true,
+          guestEmail: true,
+          userId: true,
+          payment: { select: { method: true, status: true } },
+        },
       });
       if (!currentOrder) {
         throw new TRPCError({
@@ -497,9 +503,10 @@ export const orderRouter = createTRPCRouter({
         return { id: currentOrder.id, status: currentOrder.status };
       }
       if (
-        !getAllowedOrderStatusTransitions(currentOrder.status).includes(
-          input.status,
-        )
+        !getAllowedOrderStatusTransitions(
+          currentOrder.status,
+          currentOrder.payment,
+        ).includes(input.status)
       ) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",

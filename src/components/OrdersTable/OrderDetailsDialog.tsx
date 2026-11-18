@@ -78,7 +78,10 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
   const selectableStatuses = orderDetails
     ? [
         orderDetails.status,
-        ...getAllowedOrderStatusTransitions(orderDetails.status),
+        ...getAllowedOrderStatusTransitions(
+          orderDetails.status,
+          orderDetails.payment,
+        ),
       ]
     : [];
 
@@ -222,13 +225,11 @@ export default function OrderDetailsDialog({ orderId }: { orderId: string }) {
                     {isPending ? "Actualizando..." : "Actualizar"}
                   </Button>
                 </div>
-                {orderDetails &&
-                  getAllowedOrderStatusTransitions(orderDetails.status)
-                    .length === 0 && (
-                    <p className="text-muted-foreground text-sm">
-                      Este pedido ya no admite cambios de estado.
-                    </p>
-                  )}
+                {selectableStatuses.length === 1 && (
+                  <p className="text-muted-foreground text-sm">
+                    Este pedido ya no admite cambios de estado.
+                  </p>
+                )}
               </div>
             </div>
           </div>
