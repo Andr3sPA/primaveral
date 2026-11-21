@@ -9,10 +9,16 @@ crearon. No significa que se deba borrar la base ni volver a crear sus tablas.
 El repositorio conserva el esquema base en
 `20261107160000_neon_baseline`. Ese DDL se generó desde el esquema leído en
 Neon durante la investigación de este incidente; no contiene filas ni secretos.
-La inspección de solo lectura encontró que la base no tiene
+La inspección histórica de solo lectura para preparar ese baseline encontró que
+la base no tenía
 `_prisma_migrations`, las tablas/enums sociales ni las nuevas columnas de
 producto. También encontró `Order.userId` y `Order.phone` obligatorios y
 ausentes los campos de pedidos invitados, direcciones extendidas y seguimiento.
+Ese hallazgo no describe el estado actual de Producción: el diagnóstico del
+incidente de catálogo del 21 de noviembre de 2026 confirma que
+`_prisma_migrations` ya existe, pero falta aplicar
+`20261121100000_product_availability_and_gallery`, que agrega las columnas
+`MenuItem.requiresAvailabilityConfirmation` y `MenuItem.images`.
 
 Las migraciones incrementales posteriores son:
 
@@ -24,6 +30,7 @@ Las migraciones incrementales posteriores son:
 | `20261114170000_social_publishing`                 | Crea las tablas, enums e índices para la cola de publicaciones sociales.                                                                                                                                                   |
 | `20261114180000_product_social_opt_in`             | Agrega el estado `CANCELLED` y el opt-in social anterior por producto.                                                                                                                                                     |
 | `20261115100000_per_platform_social_targets`       | Reemplaza el opt-in único con las opciones independientes de Facebook e Instagram, preservando los opt-ins existentes.                                                                                                     |
+| `20261121100000_product_availability_and_gallery`  | Agrega `MenuItem.requiresAvailabilityConfirmation` y `MenuItem.images`, usados por el catálogo de productos.                                                                                                               |
 
 Las migraciones de pedidos agregan columnas opcionales y relajan restricciones;
 no eliminan filas. La primera también reemplaza la FK de `Order.userId`. La
@@ -31,9 +38,15 @@ segunda es una reparación idempotente para sus cuatro columnas. Que el SQL sea
 idempotente no demuestra que Neon tenga el esquema correcto; las restricciones,
 columnas y datos deben compararse antes de registrar migraciones como aplicadas.
 
-`npm run vercel-build` solo ejecuta `npm run build`. Vercel no aplica
-migraciones automáticamente. `npm run db:migrate` queda como operación manual
-explícita, nunca como paso de compilación.
+`npm run vercel-build` aplica `npm run db:migrate` antes de compilar únicamente
+cuando `VERCEL_ENV=production`. El script detiene el build si falla la
+migración, por lo que Next.js no puede compilar ni desplegar código que dependa
+de columnas ausentes. Los builds de Preview y locales no modifican ninguna
+base. `db:migrate` ejecuta `prisma migrate deploy`, que aplica en orden todas
+las migraciones pendientes del historial; revisa cada migración y conserva su
+compatibilidad hacia atrás antes de integrarla. Si una base existente carece
+de un baseline registrado, Prisma debe fallar y detener el build; no se debe
+sortear el error con `db push` o `migrate resolve` automático.
 
 El perfil necesita las columnas `User.municipality` y `User.department` de la
 migración `20261107180000_reconcile_profile_address_columns`. Si el perfil
@@ -130,9 +143,12 @@ proceso por `db push`.
 
 ## Vercel
 
-No agregues `prisma migrate deploy` al comando de build ni a un hook automático
-de Production mientras Neon no tenga un baseline verificado. Después de
-completar el baseline en un despliegue controlado, aplica cada migración
-pendiente como una operación separada y aprobada antes de desplegar código que
-dependa de ella. `DATABASE_URL` se mantiene configurada en Vercel para la
-aplicación, pero el build no la usa para modificar la base de datos.
+En cada build de Production, el script configurado en `vercel-build` migra
+primero y después ejecuta `next build`; una migración fallida impide el build.
+Vercel define `VERCEL_ENV=production` para ese entorno. Preview y desarrollo
+omiten la migración para no tocar por accidente la base de Producción. La
+conexión `DATABASE_URL` debe apuntar a la base Neon de Production en ese
+entorno. Las migraciones automáticas no reemplazan el procedimiento de baseline
+anterior: bases existentes sin historial verificado deben prepararse y
+ensayarse primero, y no deben recibir `db push`, `migrate resolve` ni
+migraciones hasta completar ese procedimiento.
