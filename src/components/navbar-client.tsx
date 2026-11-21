@@ -11,7 +11,6 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -51,9 +50,6 @@ export function NavbarClient() {
           <span className="min-w-0">
             <span className="font-script block truncate text-xl leading-tight font-medium text-[#875f00] sm:text-2xl">
               Primaveral
-            </span>
-            <span className="hidden text-xs font-medium text-[#514060] sm:block">
-              Bordados de Cartago
             </span>
           </span>
         </Link>
@@ -154,9 +150,6 @@ export function NavbarClient() {
                 <SheetTitle className="font-script text-left text-2xl leading-tight font-medium text-[#875f00]">
                   Primaveral
                 </SheetTitle>
-                <SheetDescription className="text-left text-sm text-[#514060]">
-                  Bordados de Cartago
-                </SheetDescription>
               </SheetHeader>
               <nav
                 aria-label="Navegación principal"

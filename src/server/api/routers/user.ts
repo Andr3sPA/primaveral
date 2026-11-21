@@ -171,6 +171,44 @@ export const userRouter = createTRPCRouter({
         role: userFromDb.role,
       };
     }),
+  getAuthenticationMethods: protectedProcedure.query(async ({ ctx }) => {
+    const [user, googleAccount] = await Promise.all([
+      ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { password: true },
+      }),
+      ctx.db.account.findFirst({
+        where: { userId: ctx.session.user.id, provider: "google" },
+        select: { id: true },
+      }),
+    ]);
+
+    return {
+      hasPassword: Boolean(user?.password),
+      googleLinked: Boolean(googleAccount),
+    };
+  }),
+  setPassword: protectedProcedure
+    .input(z.object({ password: passwordSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const updated = await ctx.db.user.updateMany({
+        where: { id: ctx.session.user.id, password: null },
+        data: { password: await bcrypt.hash(input.password, 10) },
+      });
+
+      if (updated.count !== 1) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "Esta cuenta ya tiene una contraseña. Usa la opción «Olvidaste tu contraseña» para cambiarla.",
+        });
+      }
+
+      return {
+        message:
+          "Contraseña creada. Ya puedes iniciar sesión con correo y contraseña.",
+      };
+    }),
   getProfile: protectedProcedure.query(async ({ ctx }) => {
     try {
       return {
@@ -445,7 +483,7 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ token: z.string().min(1).max(128) }))
     .mutation(async ({ ctx, input }) => {
       const token = digestAccountToken(input.token);
-      await ctx.db.$transaction(async (tx) => {
+      const user = await ctx.db.$transaction(async (tx) => {
         const tokenRecord = await tx.verificationToken.findUnique({
           where: { token },
         });
@@ -492,7 +530,7 @@ export const userRouter = createTRPCRouter({
 
         const verifiedUser = await tx.user.findUnique({
           where: { email },
-          select: { id: true },
+          select: { id: true, email: true, name: true, role: true },
         });
         if (!verifiedUser) {
           throw new TRPCError({
@@ -505,10 +543,13 @@ export const userRouter = createTRPCRouter({
           where: { userId: null, guestEmail: email },
           data: { userId: verifiedUser.id },
         });
+
+        return verifiedUser;
       });
 
       return {
-        message: "Tu correo quedó confirmado. Ya puedes iniciar sesión.",
+        message: "Tu correo quedó confirmado y tu sesión ya está iniciada.",
+        user,
       };
     }),
   requestPasswordReset: publicProcedure

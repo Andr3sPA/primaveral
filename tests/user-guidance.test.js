@@ -123,7 +123,7 @@ test("the global navigation makes the cart count and mobile menu accessible", as
     /font-script(?=[^"]*text-2xl)(?=[^"]*text-\[#875f00\])[^"]*/,
   );
   assert.doesNotMatch(source, /font-\[cursive\]|italic/);
-  assert.match(source, /<SheetDescription/);
+  assert.doesNotMatch(source, /<SheetDescription|Bordados de Cartago/);
   assert.match(source, /text-base font-medium/);
   assert.match(source, /min-h-12 w-full justify-center text-base/);
   assert.doesNotMatch(source, /mt-8 flex flex-col gap-5/);
@@ -187,7 +187,7 @@ test("the header brand uses the self-hosted script font on desktop and mobile", 
     assert.match(className, /text-\[#875f00\]/);
     assert.doesNotMatch(className, /italic|font-\[cursive\]/);
   }
-  assert.match(navigation, /Bordados de Cartago/);
+  assert.doesNotMatch(navigation, /Bordados de Cartago/);
   assert.match(layout, /src: "\.\/fonts\/dancing-script\.woff2"/);
   assert.match(layout, /variable: "--font-script"[\s\S]*weight: "400 700"/);
   assert.match(layout, /\$\{script\.variable\}/);

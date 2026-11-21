@@ -18,10 +18,10 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 - Identidad visual floral con navegación adaptable, precios COP legibles, imágenes reales y controles amplios.
 - Carrito persistente en el navegador con cantidades y control de stock al crear pedidos.
 - Checkout de invitado o de cuenta verificada, pago al recibir y checkout hospedado de Wompi Sandbox/Producción con confirmación por webhook firmado; la aplicación no recibe ni almacena datos de tarjeta.
-- Registro e inicio de sesión con correo y contraseña, verificación de cuenta y recuperación de contraseña mediante Brevo.
+- Registro e inicio de sesión con correo y contraseña o Google, verificación de cuenta y recuperación de contraseña mediante Brevo. Tras confirmar el correo manualmente, la sesión se inicia automáticamente.
 - Perfil con nombre/teléfono opcionales y dirección guardada con municipio y departamento; el checkout permite comprar autenticado o como invitado.
 - Seguimiento público sin iniciar sesión: busca por número y correo de compra o abre el enlace privado de los correos. Los correos de estado y pago llevan directamente al pedido correspondiente.
-- Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`; no hay acceso social con GitHub.
+- Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`; el acceso con Google requiere correo verificado y conserva los datos de perfil ya guardados.
 - Panel administrativo en `/admin` con accesos a inventario, alta de productos, pedidos y métricas.
 - Productos con categoría, tallas, colores, imagen, precio, stock y disponibilidad.
 - Cada producto puede marcarse como `Envío inmediato` o `Traer por encargo`. El administrador configura el plazo en días calendario (de 0 a 365, incluidos plazos de 30 días o más); se muestra en la ficha, bolsa y checkout, y se guarda como una copia en cada pedido para que cambios posteriores al producto no alteren pedidos existentes.
@@ -105,6 +105,11 @@ usar HTTPS. Define un `APP_URL` explícito en cada entorno de Vercel y no uses l
 URL efímera de una Preview como dirección de correo. El mensaje HTML presenta
 un botón claro y no muestra la URL larga; la versión de texto incluye el enlace
 directo para que también pueda abrirse desde lectores sin formato HTML.
+
+Para activar el inicio de sesión con Google, configura `AUTH_GOOGLE_ID` y
+`AUTH_GOOGLE_SECRET` en el entorno de servidor. Ambos valores deben estar
+presentes juntos. La aplicación solicita solo el acceso predeterminado de
+Google para `openid`, correo y perfil básico.
 
 La aplicación envía a Brevo el enlace directo a `APP_URL` y no configura
 seguimiento de clics en la solicitud. No podemos ver desde el código si el

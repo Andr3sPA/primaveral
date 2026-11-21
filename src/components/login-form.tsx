@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 type FormResponse = {
   status: "idle" | "loading" | "error" | "ok";
@@ -16,9 +17,14 @@ type FormResponse = {
 };
 
 export function LoginForm({
+  googleEnabled,
+  googleError,
   className,
   ...props
-}: React.ComponentProps<"form">) {
+}: React.ComponentProps<"form"> & {
+  googleEnabled: boolean;
+  googleError?: string;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [response, setResponse] = useState<FormResponse>({
@@ -74,6 +80,20 @@ export function LoginForm({
         </p>
       </div>
       <div className="grid gap-5">
+        {googleError && (
+          <p role="alert" className="text-sm text-red-700">
+            {googleError}
+          </p>
+        )}
+        <GoogleSignInButton enabled={googleEnabled} />
+        <div
+          aria-hidden="true"
+          className="text-muted-foreground flex items-center gap-3 text-sm"
+        >
+          <span className="h-px flex-1 bg-stone-200" />
+          <span>o usa tu correo</span>
+          <span className="h-px flex-1 bg-stone-200" />
+        </div>
         <div className="grid gap-2">
           <Label htmlFor="email">Correo electrónico</Label>
           <Input

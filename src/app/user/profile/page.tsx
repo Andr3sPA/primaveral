@@ -1,5 +1,6 @@
 import { ProfileForm } from "@/components/ProfileForm";
 import { MyOrders } from "@/components/MyOrders";
+import { AccountSecurityForm } from "@/components/AccountSecurityForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/server/auth";
@@ -24,6 +25,22 @@ export default async function ProfilePage() {
         </Button>
       </header>
       <MyOrders />
+      <section aria-labelledby="account-security-heading" className="space-y-4">
+        <div>
+          <h2 id="account-security-heading" className="text-2xl font-medium">
+            Seguridad de la cuenta
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Revisa cómo puedes acceder a tu cuenta y configura una contraseña si
+            la creaste con Google.
+          </p>
+        </div>
+        <Card className="rounded-2xl border-stone-200 shadow-sm">
+          <CardContent className="p-6 sm:p-8">
+            <AccountSecurityForm />
+          </CardContent>
+        </Card>
+      </section>
       <section aria-labelledby="profile-details-heading" className="space-y-4">
         <div>
           <h2 id="profile-details-heading" className="text-2xl font-medium">
