@@ -23,10 +23,6 @@ export function SiteFooter() {
               </p>
             </div>
           </div>
-          <p className="mt-5 text-base leading-7 text-[#514060]">
-            Arte que se viste, tradición que perdura. Prendas de vestir
-            exclusivas bordadas a mano de Cartago en Medellín.
-          </p>
         </div>
         <div className="grid gap-2 text-base sm:grid-cols-2 sm:gap-x-8">
           <a

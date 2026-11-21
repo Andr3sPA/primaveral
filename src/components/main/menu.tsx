@@ -140,11 +140,10 @@ export default function Menu() {
             Bordados hechos a mano en Cartago
           </p>
           <h1 className="font-display text-store-brand max-w-3xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-            Prendas y accesorios bordados a mano
+            Arte que se viste, tradición que perdura.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-[#514060] sm:text-xl">
-            Piezas artesanales para usar y regalar. Revisa cada producto, su
-            precio y su plazo de entrega antes de comprar.
+            Prendas de vestir exclusivas bordadas a mano de Cartago en Medellín.
           </p>
           <Link
             href="#coleccion"

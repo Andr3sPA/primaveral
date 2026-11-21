@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { ChevronRight, Flower2, Menu, ShoppingBag } from "lucide-react";
+import { ChevronRight, Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import {
@@ -38,10 +39,17 @@ export function NavbarClient() {
       <div className="mx-auto flex h-[4.5rem] max-w-7xl min-w-0 items-center justify-between gap-2 px-4 sm:h-20 sm:gap-3 sm:px-6 lg:px-10">
         <Link href="/" className="flex min-h-11 min-w-0 items-center gap-2">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f7e7a9] text-[#48235c]">
-            <Flower2 className="h-6 w-6" aria-hidden="true" />
+            <Image
+              src="/primaveral-flower.png"
+              width={32}
+              height={27}
+              alt=""
+              aria-hidden="true"
+              className="h-7 w-8 object-contain"
+            />
           </span>
           <span className="min-w-0">
-            <span className="font-display block truncate text-xl leading-tight font-semibold tracking-tight text-[#48235c] sm:text-2xl">
+            <span className="block truncate font-[cursive] text-xl leading-tight font-semibold tracking-tight text-[#875f00] italic sm:text-2xl">
               Primaveral
             </span>
             <span className="hidden text-xs font-medium text-[#514060] sm:block">
@@ -134,9 +142,16 @@ export function NavbarClient() {
                   aria-hidden="true"
                   className="mb-2 grid size-9 place-items-center rounded-full bg-[#f7e7a9] text-[#48235c]"
                 >
-                  <Flower2 className="size-5" aria-hidden="true" />
+                  <Image
+                    src="/primaveral-flower.png"
+                    width={24}
+                    height={20}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-5 w-6 object-contain"
+                  />
                 </span>
-                <SheetTitle className="font-display text-left text-2xl leading-tight font-semibold text-[#48235c]">
+                <SheetTitle className="text-left font-[cursive] text-2xl leading-tight font-semibold text-[#875f00] italic">
                   Primaveral
                 </SheetTitle>
                 <SheetDescription className="text-left text-sm text-[#514060]">
