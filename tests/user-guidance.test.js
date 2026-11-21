@@ -56,6 +56,18 @@ test("the sign-in page explains how to correct the email or resend confirmation"
   assert.match(source, /Corregir correo o reenviar confirmación/);
 });
 
+test("the sign-in and signup pages enable Google using the configured OAuth keys", async () => {
+  const [signin, signup] = await Promise.all([
+    readSource("src/app/user/signin/page.tsx"),
+    readSource("src/app/user/signup/page.tsx"),
+  ]);
+
+  for (const page of [signin, signup]) {
+    assert.match(page, /env\.OAUTH_CLIENT_ID\s*&&\s*env\.OAUTH_CLIENT_SECRET/);
+    assert.doesNotMatch(page, /AUTH_GOOGLE_(ID|SECRET)/);
+  }
+});
+
 test("registration fields have visible labels and readable password guidance", async () => {
   const source = await readSource("src/components/signup1.tsx");
 

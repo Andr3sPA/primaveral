@@ -106,8 +106,8 @@ URL efímera de una Preview como dirección de correo. El mensaje HTML presenta
 un botón claro y no muestra la URL larga; la versión de texto incluye el enlace
 directo para que también pueda abrirse desde lectores sin formato HTML.
 
-Para activar el inicio de sesión con Google, configura `AUTH_GOOGLE_ID` y
-`AUTH_GOOGLE_SECRET` en el entorno de servidor. Ambos valores deben estar
+Para activar el inicio de sesión con Google, configura `OAUTH_CLIENT_ID` y
+`OAUTH_CLIENT_SECRET` en el entorno de servidor. Ambos valores deben estar
 presentes juntos. La aplicación solicita solo el acceso predeterminado de
 Google para `openid`, correo y perfil básico.
 

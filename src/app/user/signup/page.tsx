@@ -12,7 +12,7 @@ export default function SignUpPage() {
           {/* Formulario de registro */}
           <Signup1
             googleEnabled={Boolean(
-              env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET,
+              env.OAUTH_CLIENT_ID && env.OAUTH_CLIENT_SECRET,
             )}
           />
         </CardContent>
