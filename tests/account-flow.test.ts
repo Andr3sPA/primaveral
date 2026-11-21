@@ -1325,8 +1325,8 @@ test("registration succeeds when legacy User address columns are absent", async 
   }
 });
 
-test("schema repair exists and Vercel build never connects to or migrates the database", async () => {
-  const [schema, repair, packageJson, vercelBuild] = await Promise.all([
+test("Vercel production build migrates before building; preview build does not migrate", async () => {
+  const [schema, repair, migration, packageJson] = await Promise.all([
     readFile(new URL("../prisma/schema.prisma", import.meta.url), "utf8"),
     readFile(
       new URL(
@@ -1335,8 +1335,14 @@ test("schema repair exists and Vercel build never connects to or migrates the da
       ),
       "utf8",
     ),
+    readFile(
+      new URL(
+        "../prisma/migrations/20261121100000_product_availability_and_gallery/migration.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readFile(new URL("../scripts/vercel-build.mjs", import.meta.url), "utf8"),
   ]);
 
   assert.match(schema, /municipality\s+String\?/);
@@ -1348,14 +1354,32 @@ test("schema repair exists and Vercel build never connects to or migrates the da
     repair,
     /ALTER TABLE "Order"[\s\S]*ADD COLUMN IF NOT EXISTS "municipality"/,
   );
+  assert.match(schema, /requiresAvailabilityConfirmation\s+Boolean/);
+  assert.match(schema, /images\s+String\[\]/);
+  assert.match(
+    migration,
+    /ADD COLUMN "requiresAvailabilityConfirmation" BOOLEAN NOT NULL DEFAULT false,[\s\S]*ADD COLUMN "images" TEXT\[\] NOT NULL DEFAULT ARRAY\[\]::TEXT\[\]/,
+  );
   assert.match(
     packageJson,
     /"vercel-build": "node scripts\/vercel-build\.mjs"/,
   );
-  assert.doesNotMatch(vercelBuild, /db:migrate|migrate deploy|DATABASE_URL/);
-  const commands: Array<[string, string[]]> = [];
-  runVercelBuild((command, args) => commands.push([command, args]));
-  assert.deepEqual(commands, [["npm", ["run", "build"]]]);
+  assert.match(packageJson, /"db:migrate": "prisma migrate deploy"/);
+
+  const productionCommands: Array<[string, string[]]> = [];
+  runVercelBuild((command, args) => productionCommands.push([command, args]), {
+    VERCEL_ENV: "production",
+  });
+  assert.deepEqual(productionCommands, [
+    ["npm", ["run", "db:migrate"]],
+    ["npm", ["run", "build"]],
+  ]);
+
+  const previewCommands: Array<[string, string[]]> = [];
+  runVercelBuild((command, args) => previewCommands.push([command, args]), {
+    VERCEL_ENV: "preview",
+  });
+  assert.deepEqual(previewCommands, [["npm", ["run", "build"]]]);
 });
 
 test("public errors are Spanish and internal diagnostics omit raw details", () => {

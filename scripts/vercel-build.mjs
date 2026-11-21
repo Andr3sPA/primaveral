@@ -17,8 +17,17 @@ function run(command, args) {
   }
 }
 
-/** @param {(command: string, args: string[]) => void} [runCommand] */
-export function runVercelBuild(runCommand = run) {
+/**
+ * @param {(command: string, args: string[]) => void} [runCommand]
+ * @param {Pick<NodeJS.ProcessEnv, "VERCEL_ENV">} [environment]
+ */
+export function runVercelBuild(
+  runCommand = run,
+  environment = { VERCEL_ENV: process.env.VERCEL_ENV },
+) {
+  if (environment.VERCEL_ENV === "production") {
+    runCommand("npm", ["run", "db:migrate"]);
+  }
   runCommand("npm", ["run", "build"]);
 }
 
