@@ -15,22 +15,11 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
+import type { RouterOutputs } from "@/trpc/react";
+import { ProductImageManager } from "@/components/product-image-manager";
+import { getProductImages } from "@/lib/product-images";
 
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string | null;
-  currency: string;
-  price: number;
-  available: boolean;
-  autoPublishToFacebook: boolean;
-  autoPublishToInstagram: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  image: string | null;
-  fulfillmentType: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
-  leadTimeDays: number;
-}
+type MenuItem = RouterOutputs["menu"]["getMenuItems"][number];
 
 // Componente para editar los detalles de un elemento del menú
 export default function EditMenuItemDialog({
@@ -45,7 +34,14 @@ export default function EditMenuItemDialog({
   );
   const [currency, setCurrency] = React.useState(menuItem.currency);
   const [price, setPrice] = React.useState(menuItem.price.toString());
-  const [image, setImage] = React.useState(menuItem.image ?? "");
+  const [images, setImages] = React.useState(
+    getProductImages(menuItem.image, menuItem.images),
+  );
+  const [isUploadingImages, setIsUploadingImages] = React.useState(false);
+  const [
+    requiresAvailabilityConfirmation,
+    setRequiresAvailabilityConfirmation,
+  ] = React.useState(menuItem.requiresAvailabilityConfirmation);
   const [autoPublishToFacebook, setAutoPublishToFacebook] = React.useState(
     menuItem.autoPublishToFacebook,
   );
@@ -81,11 +77,18 @@ export default function EditMenuItemDialog({
       description: description || undefined,
       currency,
       price: parseFloat(price),
-      image: image || undefined,
+      image: images[0] ?? null,
+      images,
+      category: menuItem.category,
+      sizes: menuItem.sizes,
+      colors: menuItem.colors,
+      stock: menuItem.stock,
+      featured: menuItem.featured,
       autoPublishToFacebook,
       autoPublishToInstagram,
       fulfillmentType,
       leadTimeDays: parseInt(leadTimeDays, 10),
+      requiresAvailabilityConfirmation,
     });
   };
 
@@ -144,15 +147,11 @@ export default function EditMenuItemDialog({
               />
             </div>
           </div>
-          <div>
-            <Label htmlFor="image">URL de imagen (opcional)</Label>
-            <Input
-              id="image"
-              type="url"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-            />
-          </div>
+          <ProductImageManager
+            images={images}
+            onChange={setImages}
+            onUploadingChange={setIsUploadingImages}
+          />
           <div className="space-y-3">
             <p className="text-sm font-medium">
               El producto siempre se muestra en la página web. Redes sociales:
@@ -212,6 +211,30 @@ export default function EditMenuItemDialog({
               </select>
             </div>
             <div>
+              <Label htmlFor="requiresAvailabilityConfirmation">
+                ¿Cómo se compra esta prenda?
+              </Label>
+              <select
+                id="requiresAvailabilityConfirmation"
+                value={requiresAvailabilityConfirmation ? "confirm" : "buy"}
+                onChange={(event) =>
+                  setRequiresAvailabilityConfirmation(
+                    event.currentTarget.value === "confirm",
+                  )
+                }
+                className="border-input bg-background mt-1 h-10 w-full rounded-md border px-3 text-sm"
+              >
+                <option value="buy">Se puede comprar en la web</option>
+                <option value="confirm">
+                  Consultar disponibilidad primero
+                </option>
+              </select>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Si eliges consultar, la tienda mostrará un botón para confirmar
+                por WhatsApp en lugar de comprar.
+              </p>
+            </div>
+            <div>
               <Label htmlFor="leadTimeDays">Días estimados de entrega</Label>
               <Input
                 id="leadTimeDays"
@@ -235,7 +258,7 @@ export default function EditMenuItemDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || isUploadingImages}>
               {isPending ? "Actualizando..." : "Actualizar"}
             </Button>
           </div>

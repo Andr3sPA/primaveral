@@ -27,7 +27,8 @@ export const productInputSchema = z.object({
   description: z.string().trim().max(500).optional(),
   currency: z.string().length(1).default("$"),
   price: z.number().finite().positive("El precio debe ser mayor a cero"),
-  image: z.string().url().optional(),
+  image: z.string().url().nullable().optional(),
+  images: z.array(z.string().url()).max(8).default([]),
   category: z.string().trim().min(2).default("Novedades"),
   sizes: z.array(z.string().trim().min(1)).max(12).default([]),
   colors: z.array(z.string().trim().min(1)).max(12).default([]),
@@ -37,6 +38,7 @@ export const productInputSchema = z.object({
   autoPublishToInstagram: z.boolean().optional(),
   fulfillmentType: z.nativeEnum(FulfillmentType).default("READY_TO_SHIP"),
   leadTimeDays: z.number().int().min(0).max(365).default(0),
+  requiresAvailabilityConfirmation: z.boolean().default(false),
 });
 
 type ProductPublicationState = Pick<

@@ -29,11 +29,15 @@ export default async function MenuItemPage({
             inStock={item.available && item.stock > 0}
             stockCount={item.stock}
             imageUrl={item.image ?? undefined}
+            images={item.images}
             category={item.category}
             sizes={item.sizes ?? []}
             colors={item.colors ?? []}
             fulfillmentType={item.fulfillmentType}
             leadTimeDays={item.leadTimeDays}
+            requiresAvailabilityConfirmation={
+              item.requiresAvailabilityConfirmation
+            }
           />
         </div>
       ) : (

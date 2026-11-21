@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, Heart, MessageCircle, Truck } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ImageViewer from "@/components/menu-item/image-viewer-basic";
@@ -11,11 +12,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { WHATSAPP_CHAT_URL } from "@/lib/social-links";
+import { getProductImages } from "@/lib/product-images";
+import {
+  createAvailabilityWhatsAppUrl,
+  WHATSAPP_CHAT_URL,
+} from "@/lib/social-links";
 
 interface MenuItemDetailsProps {
   id: string;
   imageUrl?: string;
+  images?: string[];
   title?: string;
   description?: string;
   inStock?: boolean;
@@ -27,12 +33,14 @@ interface MenuItemDetailsProps {
   colors?: string[];
   fulfillmentType?: "READY_TO_SHIP" | "SOURCED_TO_ORDER";
   leadTimeDays?: number;
+  requiresAvailabilityConfirmation?: boolean;
 }
 
 function MenuItemDetails({
   id,
   description,
   imageUrl,
+  images = [],
   inStock,
   prefix = "$",
   price = 0,
@@ -43,11 +51,16 @@ function MenuItemDetails({
   stockCount = 0,
   fulfillmentType = "READY_TO_SHIP",
   leadTimeDays = 0,
+  requiresAvailabilityConfirmation = false,
 }: MenuItemDetailsProps) {
   const { addItem } = useCart();
   const router = useRouter();
   const [selectedSize, setSelectedSize] = useState(sizes[0] ?? "");
   const [selectedColor, setSelectedColor] = useState(colors[0] ?? "");
+  const productImages = getProductImages(imageUrl ?? null, images);
+  const [selectedImage, setSelectedImage] = useState(
+    productImages[0] ?? imageUrl ?? "",
+  );
   const [isFavorite, setIsFavorite] = useState(false);
 
   const handleAdd = (goToCheckout = false) => {
@@ -94,13 +107,44 @@ function MenuItemDetails({
           <div className="bg-secondary relative overflow-hidden rounded-[2rem] p-3 sm:p-5">
             <div className="stitch-border overflow-hidden rounded-[1.5rem] bg-[#d8c6b5]">
               <ImageViewer
-                imageUrl={imageUrl ?? ""}
+                imageUrl={selectedImage}
                 imageTitle={title}
                 classNameThumbnailViewer="aspect-[4/5] w-full object-cover"
                 className="w-full"
               />
             </div>
           </div>
+          {productImages.length > 1 && (
+            <div
+              className="mt-3 flex gap-3 overflow-x-auto pb-2"
+              role="group"
+              aria-label="Fotos del producto"
+            >
+              {productImages.map((image, index) => (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  aria-label={`Ver foto ${index + 1} de ${productImages.length}`}
+                  aria-pressed={selectedImage === image}
+                  onClick={() => setSelectedImage(image)}
+                  className={cn(
+                    "relative h-20 w-16 shrink-0 overflow-hidden rounded-lg border-2 sm:h-24 sm:w-20",
+                    selectedImage === image
+                      ? "border-primary"
+                      : "border-transparent",
+                  )}
+                >
+                  <Image
+                    src={image}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="text-muted-foreground mt-4 flex items-center gap-3 text-xs tracking-[0.16em] uppercase">
             <span className="thread-line flex-1" />
             Hecho con calma
@@ -226,35 +270,75 @@ function MenuItemDetails({
             )}
 
             <div className="grid gap-3 sm:grid-cols-2">
+              {requiresAvailabilityConfirmation ? (
+                <div className="space-y-3 sm:col-span-2">
+                  <p className="rounded-xl bg-[#f2eaf5] p-4 text-base leading-6 text-[#35203f]">
+                    Confirma por WhatsApp que esta prenda y la opción elegida
+                    estén disponibles antes de comprar.
+                  </p>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 w-full rounded-full bg-[#075e54] text-base text-white hover:bg-[#064e46]"
+                  >
+                    <a
+                      href={WHATSAPP_CHAT_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        window.open(
+                          createAvailabilityWhatsAppUrl({
+                            productName: title,
+                            productUrl: `${window.location.origin}/menu/${id}`,
+                            size: selectedSize || undefined,
+                            color: selectedColor || undefined,
+                          }),
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }}
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      Contactar para confirmar disponibilidad
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-primary text-primary hover:bg-secondary h-12 rounded-full"
+                    onClick={() => handleAdd()}
+                    disabled={!inStock}
+                  >
+                    Añadir a la bolsa
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-full"
+                    onClick={() => handleAdd(true)}
+                    disabled={!inStock}
+                  >
+                    Comprar ahora <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+            {!requiresAvailabilityConfirmation && (
               <Button
+                asChild
                 size="lg"
                 variant="outline"
-                className="border-primary text-primary hover:bg-secondary h-12 rounded-full"
-                onClick={() => handleAdd()}
-                disabled={!inStock}
+                className="mt-3 h-12 w-full rounded-full border-[#128c7e] text-[#075e54] hover:bg-[#e8f7f4]"
               >
-                Añadir a la bolsa
+                <a href={WHATSAPP_CHAT_URL} target="_blank" rel="noreferrer">
+                  <MessageCircle className="h-4 w-4" />
+                  Consultar por WhatsApp
+                </a>
               </Button>
-              <Button
-                size="lg"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-full"
-                onClick={() => handleAdd(true)}
-                disabled={!inStock}
-              >
-                Comprar ahora <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="mt-3 h-12 w-full rounded-full border-[#128c7e] text-[#075e54] hover:bg-[#e8f7f4]"
-            >
-              <a href={WHATSAPP_CHAT_URL} target="_blank" rel="noreferrer">
-                <MessageCircle className="h-4 w-4" />
-                Consultar por WhatsApp
-              </a>
-            </Button>
+            )}
             <div className="border-border text-muted-foreground mt-7 grid gap-3 border-t pt-6 text-sm sm:grid-cols-2">
               <p className="flex items-center gap-2">
                 <Truck className="text-primary h-4 w-4" /> Envíos a todo el país

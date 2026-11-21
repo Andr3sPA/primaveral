@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Flower2, Search, ShoppingBag } from "lucide-react";
+import {
+  ArrowRight,
+  Flower2,
+  MessageCircle,
+  Search,
+  ShoppingBag,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
@@ -10,6 +16,10 @@ import type { RouterOutputs } from "@/trpc/react";
 import { useCart } from "@/contexts/CartContext";
 import { normalizeSearchText } from "@/lib/normalize-search-text.js";
 import { formatCOP } from "@/lib/format-currency";
+import {
+  createAvailabilityWhatsAppUrl,
+  WHATSAPP_CHAT_URL,
+} from "@/lib/social-links";
 
 type Product = RouterOutputs["menu"]["getPublicMenuItems"][number];
 
@@ -54,22 +64,45 @@ function ProductCard({ item }: { item: Product }) {
           </p>
         </div>
       </Link>
-      <button
-        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#6f4a7c] px-4 py-2.5 text-base font-medium text-[#48235c] transition hover:bg-[#48235c] hover:text-white"
-        onClick={() => {
-          addItem({
-            id: item.id,
-            title: item.name,
-            description: item.description ?? undefined,
-            imageUrl: item.image ?? "",
-            prefix: item.currency,
-            price: item.price,
-          });
-          toast.success(`${item.name} se añadió al carrito`);
-        }}
-      >
-        <ShoppingBag className="h-4 w-4" /> Añadir al carrito
-      </button>
+      {item.requiresAvailabilityConfirmation ? (
+        <a
+          href={WHATSAPP_CHAT_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#075e54] px-4 py-3 text-center text-base font-semibold text-white transition hover:bg-[#064e46]"
+          onClick={(event) => {
+            event.preventDefault();
+            window.open(
+              createAvailabilityWhatsAppUrl({
+                productName: item.name,
+                productUrl: `${window.location.origin}/menu/${item.id}`,
+              }),
+              "_blank",
+              "noopener,noreferrer",
+            );
+          }}
+        >
+          <MessageCircle className="h-5 w-5" aria-hidden="true" />
+          Contactar para confirmar disponibilidad
+        </a>
+      ) : (
+        <button
+          className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#6f4a7c] px-4 py-2.5 text-base font-medium text-[#48235c] transition hover:bg-[#48235c] hover:text-white"
+          onClick={() => {
+            addItem({
+              id: item.id,
+              title: item.name,
+              description: item.description ?? undefined,
+              imageUrl: item.image ?? "",
+              prefix: item.currency,
+              price: item.price,
+            });
+            toast.success(`${item.name} se añadió al carrito`);
+          }}
+        >
+          <ShoppingBag className="h-4 w-4" /> Añadir al carrito
+        </button>
+      )}
     </article>
   );
 }

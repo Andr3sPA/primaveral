@@ -6,6 +6,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
+import { ProductImageManager } from "@/components/product-image-manager";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -26,16 +27,16 @@ const schema = z.object({
   stock: z.coerce.number().int().min(0),
   autoPublishToFacebook: z.boolean(),
   autoPublishToInstagram: z.boolean(),
-  image: z.string().url().optional().or(z.literal("")),
   sizes: z.string().optional(),
   colors: z.string().optional(),
   fulfillmentType: z.enum(["READY_TO_SHIP", "SOURCED_TO_ORDER"]),
   leadTimeDays: z.coerce.number().int().min(0).max(365),
+  requiresAvailabilityConfirmation: z.boolean(),
 });
 
 export default function RegisterMenuItem() {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -47,12 +48,14 @@ export default function RegisterMenuItem() {
       colors: "",
       fulfillmentType: "READY_TO_SHIP",
       leadTimeDays: 0,
+      requiresAvailabilityConfirmation: false,
     },
   });
   const mutation = api.menu.registerMenuItem.useMutation({
     onSuccess: () => {
       toast.success("Producto creado");
       form.reset();
+      setImages([]);
     },
     onError: (error) => toast.error(error.message),
   });
@@ -60,35 +63,6 @@ export default function RegisterMenuItem() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (values) => {
-          let image = values.image ?? undefined;
-          if (imageFile) {
-            setIsUploading(true);
-            try {
-              const body = new FormData();
-              body.append("file", imageFile);
-              const response = await fetch("/api/upload", {
-                method: "POST",
-                body,
-              });
-              const result = (await response.json()) as {
-                url?: string;
-                error?: string;
-              };
-              if (!response.ok || !result.url) {
-                throw new Error(result.error ?? "No se pudo subir la imagen");
-              }
-              image = result.url;
-            } catch (error) {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Error al subir imagen",
-              );
-              return;
-            } finally {
-              setIsUploading(false);
-            }
-          }
           mutation.mutate({
             ...values,
             currency: "$",
@@ -105,7 +79,8 @@ export default function RegisterMenuItem() {
             featured: false,
             fulfillmentType: values.fulfillmentType,
             leadTimeDays: values.leadTimeDays,
-            image,
+            images,
+            image: images[0] ?? null,
           });
         })}
         className="mx-auto max-w-3xl space-y-5 py-6"
@@ -130,20 +105,11 @@ export default function RegisterMenuItem() {
             </FormItem>
           )}
         />
-        <div className="space-y-2">
-          <label htmlFor="product-image-file" className="text-sm font-medium">
-            Subir imagen a Cloudinary
-          </label>
-          <Input
-            id="product-image-file"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-          />
-          <p className="text-muted-foreground text-xs">
-            JPG, PNG o WebP. Máximo 8 MB. Si eliges archivo, reemplaza la URL.
-          </p>
-        </div>
+        <ProductImageManager
+          images={images}
+          onChange={setImages}
+          onUploadingChange={setIsUploadingImages}
+        />
         <FormField
           control={form.control}
           name="description"
@@ -240,19 +206,6 @@ export default function RegisterMenuItem() {
               ))}
             </div>
           </div>
-          <FormField
-            control={form.control}
-            name="image"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL de imagen</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="https://..." />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
@@ -260,7 +213,7 @@ export default function RegisterMenuItem() {
             name="fulfillmentType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Disponibilidad</FormLabel>
+                <FormLabel>Modalidad de entrega</FormLabel>
                 <FormControl>
                   <select
                     {...field}
@@ -270,6 +223,34 @@ export default function RegisterMenuItem() {
                     <option value="SOURCED_TO_ORDER">Traer por encargo</option>
                   </select>
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="requiresAvailabilityConfirmation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>¿Cómo se compra esta prenda?</FormLabel>
+                <FormControl>
+                  <select
+                    value={field.value ? "confirm" : "buy"}
+                    onChange={(event) =>
+                      field.onChange(event.currentTarget.value === "confirm")
+                    }
+                    className="border-input bg-background ring-offset-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                  >
+                    <option value="buy">Se puede comprar en la web</option>
+                    <option value="confirm">
+                      Consultar disponibilidad primero
+                    </option>
+                  </select>
+                </FormControl>
+                <p className="text-muted-foreground text-xs">
+                  Si eliges consultar, la tienda mostrará un botón para
+                  confirmar por WhatsApp en lugar de comprar.
+                </p>
                 <FormMessage />
               </FormItem>
             )}
@@ -320,14 +301,10 @@ export default function RegisterMenuItem() {
         </div>
         <Button
           type="submit"
-          disabled={mutation.isPending || isUploading}
+          disabled={mutation.isPending || isUploadingImages}
           className="rounded-full"
         >
-          {isUploading
-            ? "Subiendo imagen..."
-            : mutation.isPending
-              ? "Guardando..."
-              : "Publicar producto"}
+          {mutation.isPending ? "Guardando..." : "Publicar producto"}
         </Button>
       </form>
     </Form>
