@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/trpc/react";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
-export function Signup1() {
+export function Signup1({ googleEnabled }: { googleEnabled: boolean }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -46,7 +47,8 @@ export function Signup1() {
             <div className="w-full space-y-4 text-center">
               <p role="status">
                 Si puedes crear una cuenta con ese correo, recibirás un mensaje
-                para confirmarla antes de iniciar sesión.
+                para confirmarla. Al abrir el enlace, iniciaremos tu sesión
+                automáticamente.
               </p>
               <p className="text-muted-foreground text-sm">
                 Revisa también la carpeta de correo no deseado.
@@ -57,6 +59,13 @@ export function Signup1() {
             </div>
           ) : (
             <div className="flex w-full flex-col gap-4">
+              <GoogleSignInButton enabled={googleEnabled} />
+              <p
+                aria-hidden="true"
+                className="text-muted-foreground text-center text-sm"
+              >
+                o crea una cuenta con tu correo
+              </p>
               <div className="grid gap-2">
                 <Label htmlFor="signup-email">Correo electrónico</Label>
                 <Input

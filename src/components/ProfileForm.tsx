@@ -107,7 +107,8 @@ export function ProfileForm() {
         </label>
         <Input id="profile-email" value={profile.email} disabled />
         <p className="text-muted-foreground mt-1 text-sm leading-6">
-          Confirmamos el correo al crear la cuenta. No puedes cambiarlo aquí.
+          Confirmamos el correo al crear la cuenta o al acceder con Google. No
+          puedes cambiarlo aquí.
         </p>
       </div>
       <div>

@@ -28,7 +28,7 @@ const { productInputSchema, getPlatformsToCancel, getPlatformsToEnqueue } =
 type TestUser = {
   id: string;
   email: string;
-  password: string;
+  password: string | null;
   emailVerified: Date | null;
   name: string | null;
   phone: string | null;
@@ -48,6 +48,7 @@ function createMemoryDatabase(
     token: string;
     expires: Date;
   }> = [];
+  const linkedAccounts = new Set<string>();
   type TestProduct = {
     id: string;
     name: string;
@@ -146,7 +147,7 @@ function createMemoryDatabase(
         const user: TestUser = {
           id: `user-${nextUserId++}`,
           email: data.email,
-          password: data.password!,
+          password: data.password ?? null,
           emailVerified: null,
           name: data.name ?? null,
           phone: data.phone ?? null,
@@ -162,13 +163,16 @@ function createMemoryDatabase(
         where,
         data,
       }: {
-        where: { email?: string; id?: string };
+        where: { email?: string; id?: string; password?: string | null };
         data: Partial<TestUser>;
       }) => {
         const user = [...users.values()].find(
           (candidate) =>
             (where.email !== undefined && candidate.email === where.email) ||
-            (where.id !== undefined && candidate.id === where.id),
+            (where.id !== undefined &&
+              candidate.id === where.id &&
+              (where.password === undefined ||
+                candidate.password === where.password)),
         );
         if (!user) return { count: 0 };
         Object.assign(user, data);
@@ -217,6 +221,16 @@ function createMemoryDatabase(
         }
         return user;
       },
+    },
+    account: {
+      findFirst: async ({
+        where,
+      }: {
+        where: { userId: string; provider: string };
+      }) =>
+        linkedAccounts.has(`${where.userId}:${where.provider}`)
+          ? { id: "linked-google-account" }
+          : null,
     },
     verificationToken: {
       deleteMany: async ({
@@ -382,6 +396,7 @@ function createMemoryDatabase(
     verificationTokens,
     orders,
     products,
+    linkedAccounts,
   };
 }
 
@@ -480,8 +495,14 @@ test("product delivery estimates accept 30+ calendar days up to the configured l
 });
 
 test("the complete account and checkout flow works with an in-memory database and mocked mail", async () => {
-  const { database, users, verificationTokens, orders, products } =
-    createMemoryDatabase();
+  const {
+    database,
+    users,
+    verificationTokens,
+    orders,
+    products,
+    linkedAccounts,
+  } = createMemoryDatabase();
   const sentEmails: Array<{
     htmlContent: string;
     textContent: string;
@@ -567,6 +588,11 @@ test("the complete account and checkout flow works with an in-memory database an
       token: emailToken(sentEmails[0]!),
     });
     assert.match(verified.message, /correo quedó confirmado/i);
+    assert.equal(
+      verified.user.id,
+      user.id,
+      "the single-use verification result can establish the user's session",
+    );
     await assert.rejects(
       caller.user.verifyEmail({ token: emailToken(sentEmails[0]!) }),
       /no funciona o ya venció/i,
@@ -662,6 +688,56 @@ test("the complete account and checkout flow works with an in-memory database an
         })
       )?.id,
       user.id,
+    );
+    const googleOnlyUser: TestUser = {
+      id: "google-only-user",
+      email: "google-only@example.test",
+      password: null,
+      emailVerified: new Date(),
+      name: "Cuenta Google",
+      phone: null,
+      address: null,
+      municipality: null,
+      department: null,
+      role: "CLIENT",
+    };
+    users.set(googleOnlyUser.email, googleOnlyUser);
+    const googleOnlyCaller = createCaller(
+      createContext(database, googleOnlyUser),
+    );
+    assert.deepEqual(await googleOnlyCaller.user.getAuthenticationMethods(), {
+      hasPassword: false,
+      googleLinked: false,
+    });
+    linkedAccounts.add(`${googleOnlyUser.id}:google`);
+    assert.deepEqual(
+      await googleOnlyCaller.user.getAuthenticationMethods(),
+      { hasPassword: false, googleLinked: true },
+      "a linked Google account is reported without exposing provider tokens",
+    );
+    await googleOnlyCaller.user.setPassword({
+      password: "GooglePassword1!",
+    });
+    assert.equal(
+      (await googleOnlyCaller.user.getAuthenticationMethods()).hasPassword,
+      true,
+    );
+    assert.equal(
+      (
+        await googleOnlyCaller.user.authenticateUser({
+          email: googleOnlyUser.email,
+          password: "GooglePassword1!",
+        })
+      )?.id,
+      googleOnlyUser.id,
+      "a Google-only account can create a password without replacing profile data",
+    );
+    await assert.rejects(
+      googleOnlyCaller.user.setPassword({
+        password: "AnotherPassword2!",
+      }),
+      /ya tiene una contraseña/i,
+      "setting a password cannot overwrite an existing one",
     );
 
     const accountCaller = createCaller(createContext(database, user));

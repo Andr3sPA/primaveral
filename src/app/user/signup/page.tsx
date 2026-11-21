@@ -1,6 +1,7 @@
 // Página de registro de usuario. Muestra el formulario de registro dentro de una tarjeta.
 import { Signup1 } from "@/components/signup1";
 import { CardContent, Card } from "@/components/ui/card";
+import { env } from "@/env";
 
 export default function SignUpPage() {
   // Renderiza el formulario de registro de usuario
@@ -9,7 +10,11 @@ export default function SignUpPage() {
       <Card className="rounded-2xl border-stone-200 shadow-sm">
         <CardContent className="p-0">
           {/* Formulario de registro */}
-          <Signup1 />
+          <Signup1
+            googleEnabled={Boolean(
+              env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET,
+            )}
+          />
         </CardContent>
       </Card>
     </main>
