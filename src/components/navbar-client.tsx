@@ -49,7 +49,7 @@ export function NavbarClient() {
             />
           </span>
           <span className="min-w-0">
-            <span className="block truncate font-[cursive] text-xl leading-tight font-semibold tracking-tight text-[#875f00] italic sm:text-2xl">
+            <span className="font-script block truncate text-xl leading-tight font-medium text-[#875f00] sm:text-2xl">
               Primaveral
             </span>
             <span className="hidden text-xs font-medium text-[#514060] sm:block">
@@ -151,7 +151,7 @@ export function NavbarClient() {
                     className="h-5 w-6 object-contain"
                   />
                 </span>
-                <SheetTitle className="text-left font-[cursive] text-2xl leading-tight font-semibold text-[#875f00] italic">
+                <SheetTitle className="font-script text-left text-2xl leading-tight font-medium text-[#875f00]">
                   Primaveral
                 </SheetTitle>
                 <SheetDescription className="text-left text-sm text-[#514060]">

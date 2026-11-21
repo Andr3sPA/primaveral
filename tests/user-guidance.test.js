@@ -120,8 +120,9 @@ test("the global navigation makes the cart count and mobile menu accessible", as
   assert.match(source, /min-h-12[^"]*px-4/);
   assert.match(
     source,
-    /font-\[cursive\](?=[^"]*text-2xl)(?=[^"]*italic)(?=[^"]*text-\[#875f00\])[^"]*/,
+    /font-script(?=[^"]*text-2xl)(?=[^"]*text-\[#875f00\])[^"]*/,
   );
+  assert.doesNotMatch(source, /font-\[cursive\]|italic/);
   assert.match(source, /<SheetDescription/);
   assert.match(source, /text-base font-medium/);
   assert.match(source, /min-h-12 w-full justify-center text-base/);
@@ -147,10 +148,6 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   assert.doesNotMatch(footer, /Arte que se viste, tradición que perdura/);
   assert.match(navigation, /src="\/primaveral-flower\.png"/);
   assert.doesNotMatch(navigation, /Flower2/);
-  assert.match(
-    navigation,
-    /font-\[cursive\](?=[^"]*italic)(?=[^"]*text-\[#875f00\])[^"]*/,
-  );
   assert.match(source, /src="\/primaveral-floral\.jpg"/);
   assert.match(source, /featuredProduct\.image/);
   assert.doesNotMatch(source, />Favorito</);
@@ -168,6 +165,38 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
 
   assert.ok(contrastRatio("fffdf8", "48235c") >= 4.5);
   assert.ok(contrastRatio("fffdf8", "875f00") >= 4.5);
+});
+
+test("the header brand uses the self-hosted script font on desktop and mobile", async () => {
+  const [navigation, layout, styles, font, license] = await Promise.all([
+    readSource("src/components/navbar-client.tsx"),
+    readSource("src/app/layout.tsx"),
+    readSource("src/styles/globals.css"),
+    readFile(new URL("../src/app/fonts/dancing-script.woff2", import.meta.url)),
+    readSource("src/app/fonts/dancing-script-OFL.txt"),
+  ]);
+  const wordmarks = [
+    ...navigation.matchAll(
+      /className="([^"]*font-script[^"]*)">\s*Primaveral/g,
+    ),
+  ];
+
+  assert.equal(wordmarks.length, 2);
+  for (const [, className] of wordmarks) {
+    assert.ok(className);
+    assert.match(className, /text-\[#875f00\]/);
+    assert.doesNotMatch(className, /italic|font-\[cursive\]/);
+  }
+  assert.match(navigation, /Bordados de Cartago/);
+  assert.match(layout, /src: "\.\/fonts\/dancing-script\.woff2"/);
+  assert.match(layout, /variable: "--font-script"[\s\S]*weight: "400 700"/);
+  assert.match(layout, /\$\{script\.variable\}/);
+  assert.match(
+    styles,
+    /\.font-script\s*\{\s*font-family:\s*var\(--font-script\), cursive;/,
+  );
+  assert.equal(font.toString("ascii", 0, 4), "wOF2");
+  assert.match(license, /SIL OPEN FONT LICENSE Version 1\.1/);
 });
 
 test("the homepage logo stays visible independently of the featured product", async () => {

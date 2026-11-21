@@ -34,6 +34,13 @@ const display = localFont({
   adjustFontFallback: "Times New Roman",
 });
 
+const script = localFont({
+  src: "./fonts/dancing-script.woff2",
+  variable: "--font-script",
+  weight: "400 700",
+  display: "swap",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -42,7 +49,7 @@ export default function RootLayout({
     <html
       suppressHydrationWarning
       lang="es"
-      className={`${sans.variable} ${display.variable}`}
+      className={`${sans.variable} ${display.variable} ${script.variable}`}
     >
       <head>
         {/* Script para manejar el modo oscuro desde localStorage - movido antes del body */}
