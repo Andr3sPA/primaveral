@@ -1,20 +1,21 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 import { db } from "@/server/db";
 import { createCaller } from "../api/root";
 import { createTRPCContext } from "../api/trpc";
 import type { Role } from "@prisma/client";
 import { getSafeErrorMetadata } from "@/server/api/error-messages";
 import { env } from "@/env";
-import { authorizeGoogleIdentity, mapGoogleProfile } from "./google-identity";
+import {
+  authorizeGoogleIdentity,
+  createGoogleProvider,
+} from "./google-identity";
 
-if (Boolean(env.AUTH_GOOGLE_ID) !== Boolean(env.AUTH_GOOGLE_SECRET)) {
-  throw new Error(
-    "AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET must both be configured.",
-  );
-}
+const googleProvider = createGoogleProvider(
+  env.OAUTH_CLIENT_ID,
+  env.OAUTH_CLIENT_SECRET,
+);
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -39,16 +40,7 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
-    ...(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET
-      ? [
-          Google({
-            clientId: env.AUTH_GOOGLE_ID,
-            clientSecret: env.AUTH_GOOGLE_SECRET,
-            allowDangerousEmailAccountLinking: true,
-            profile: mapGoogleProfile,
-          }),
-        ]
-      : []),
+    ...(googleProvider ? [googleProvider] : []),
     CredentialsProvider({
       name: "Credentials",
       credentials: {

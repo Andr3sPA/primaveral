@@ -32,7 +32,7 @@ export default async function SignInPage({
         <span className="font-display text-2xl font-semibold">Primaveral</span>
       </Link>
       <LoginForm
-        googleEnabled={Boolean(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET)}
+        googleEnabled={Boolean(env.OAUTH_CLIENT_ID && env.OAUTH_CLIENT_SECRET)}
         googleError={googleSignInErrors[errorCode]}
         className="bg-card/95 rounded-2xl border border-stone-200 p-6 shadow-sm backdrop-blur sm:p-8"
       />
