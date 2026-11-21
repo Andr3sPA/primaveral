@@ -118,7 +118,10 @@ test("the global navigation makes the cart count and mobile menu accessible", as
   assert.match(source, /SheetClose asChild/);
   assert.match(source, /className="flex flex-col gap-1 px-4 py-4"/);
   assert.match(source, /min-h-12[^"]*px-4/);
-  assert.match(source, /font-display text-left text-2xl/);
+  assert.match(
+    source,
+    /font-\[cursive\](?=[^"]*text-2xl)(?=[^"]*italic)(?=[^"]*text-\[#875f00\])[^"]*/,
+  );
   assert.match(source, /<SheetDescription/);
   assert.match(source, /text-base font-medium/);
   assert.match(source, /min-h-12 w-full justify-center text-base/);
@@ -126,17 +129,27 @@ test("the global navigation makes the cart count and mobile menu accessible", as
 });
 
 test("the homepage uses the Primaveral brand, readable controls, and sufficient contrast", async () => {
-  const [source, layout, page] = await Promise.all([
+  const [source, layout, page, footer, navigation] = await Promise.all([
     readSource("src/components/main/menu.tsx"),
     readSource("src/app/layout.tsx"),
     readSource("src/app/page.tsx"),
+    readSource("src/components/site-footer.tsx"),
+    readSource("src/components/navbar-client.tsx"),
   ]);
 
   assert.match(source, /Bordados y accesorios/);
-  assert.match(source, /Prendas y accesorios bordados a mano/);
+  assert.match(source, /Arte que se viste, tradición que perdura\./);
   assert.match(
     source,
-    /Revisa cada producto, su\s+precio y su plazo de entrega antes de comprar\./,
+    /Prendas de vestir exclusivas bordadas a mano de Cartago en Medellín\./,
+  );
+  assert.doesNotMatch(source, /Piezas artesanales para usar y regalar/);
+  assert.doesNotMatch(footer, /Arte que se viste, tradición que perdura/);
+  assert.match(navigation, /src="\/primaveral-flower\.png"/);
+  assert.doesNotMatch(navigation, /Flower2/);
+  assert.match(
+    navigation,
+    /font-\[cursive\](?=[^"]*italic)(?=[^"]*text-\[#875f00\])[^"]*/,
   );
   assert.match(source, /src="\/primaveral-floral\.jpg"/);
   assert.match(source, /featuredProduct\.image/);
@@ -154,6 +167,7 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   assert.doesNotMatch(page, /<main/);
 
   assert.ok(contrastRatio("fffdf8", "48235c") >= 4.5);
+  assert.ok(contrastRatio("fffdf8", "875f00") >= 4.5);
 });
 
 test("the homepage logo stays visible independently of the featured product", async () => {
