@@ -155,6 +155,10 @@
     font-family: var(--font-display);
   }
 
+  .font-script {
+    font-family: var(--font-script), cursive;
+  }
+
   .stitch-border {
     border: 1px dashed oklch(0.45 0.08 305 / 0.45);
   }
