@@ -321,9 +321,11 @@ test("account and checkout pages use the shared botanical theme", async () => {
   ]);
 
   for (const source of pages) assert.match(source, /botanical-page/);
-  assert.match(pages[0], /src="\/primaveral-flower\.png"/);
-  assert.doesNotMatch(pages[0], /Flower2/);
-  assert.match(pages[0], /font-script[^"]*text-\[#875f00\]/);
+  const signInPage = pages[0];
+  assert.ok(signInPage);
+  assert.match(signInPage, /src="\/primaveral-flower\.png"/);
+  assert.doesNotMatch(signInPage, /Flower2/);
+  assert.match(signInPage, /font-script[^"]*text-\[#875f00\]/);
   assert.match(styles, /\.botanical-page\s*\{[\s\S]*background-image:/);
   assert.match(styles, /oklch\(0\.82 0\.09 355/);
   assert.match(styles, /oklch\(0\.82 0\.07 145/);
