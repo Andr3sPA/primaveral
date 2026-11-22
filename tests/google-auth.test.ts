@@ -6,6 +6,40 @@ import {
   mapGoogleProfile,
   resolveGoogleOAuthCredentials,
 } from "../src/server/auth/google-identity";
+import { isGoogleOAuthInAppBrowser } from "../src/lib/google-oauth-browser";
+
+test("Google OAuth warns on embedded browsers but not mobile browsers", () => {
+  assert.equal(
+    isGoogleOAuthInAppBrowser(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 350.0.0.0.0",
+    ),
+    true,
+  );
+  assert.equal(
+    isGoogleOAuthInAppBrowser(
+      "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.0.0 Mobile Safari/537.36 wv",
+    ),
+    true,
+  );
+  assert.equal(
+    isGoogleOAuthInAppBrowser(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    ),
+    false,
+  );
+  assert.equal(
+    isGoogleOAuthInAppBrowser(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    ),
+    true,
+  );
+  assert.equal(
+    isGoogleOAuthInAppBrowser(
+      "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+    ),
+    false,
+  );
+});
 
 test("the configured OAuth variables create the Google provider", () => {
   const credentials = resolveGoogleOAuthCredentials(
