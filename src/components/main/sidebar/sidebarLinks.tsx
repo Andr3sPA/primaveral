@@ -1,11 +1,21 @@
 import ButtonLink from "@/components/main/buttonLink";
-import { Archive, TableProperties, UserRoundCog } from "lucide-react";
+import {
+  Archive,
+  Fingerprint,
+  TableProperties,
+  UserRoundCog,
+} from "lucide-react";
 import { auth } from "@/server/auth";
 
 const AdminLinks = [
   { text: "Pedidos", link: "/orders/", icon: TableProperties },
   { text: "Usuarios", link: "/users/", icon: UserRoundCog },
   { text: "Inventario", link: "/menu/inventory/", icon: Archive },
+  {
+    text: "Marca invisible",
+    link: "/admin/watermark/",
+    icon: Fingerprint,
+  },
 ];
 
 // Componente para mostrar los enlaces de navegación en la barra lateral según el rol del usuario

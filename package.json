@@ -6,7 +6,7 @@
   "scripts": {
     "build": "next build",
     "check": "next lint && tsc --noEmit",
-    "test": "node --import ./tests/server-only-mock.mjs --import tsx --test tests/user-guidance.test.js tests/account-flow.test.ts tests/google-auth.test.ts tests/social-publishing.test.ts tests/wompi.test.ts tests/order-tracking.test.ts tests/product-contact.test.ts",
+    "test": "node --import ./tests/server-only-mock.mjs --import tsx --test tests/user-guidance.test.js tests/account-flow.test.ts tests/google-auth.test.ts tests/social-publishing.test.ts tests/wompi.test.ts tests/order-tracking.test.ts tests/product-contact.test.ts tests/invisible-watermark.test.ts",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
@@ -73,6 +73,7 @@
     "react-zoom-pan-pinch": "^3.7.0",
     "recharts": "^3.1.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
     "sonner": "^2.0.5",
     "superjson": "^2.2.1",
     "tailwind-merge": "^3.3.1",
