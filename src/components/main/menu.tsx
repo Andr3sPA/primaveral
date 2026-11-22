@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight,
-  Flower2,
   MessageCircle,
   Search,
   ShoppingBag,
@@ -39,11 +38,17 @@ function ProductCard({ item }: { item: Product }) {
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-base text-[#48235c]">
-              <Flower2
-                className="h-10 w-10 text-[#9a5c87]"
+              <Image
+                src="/primaveral-flower.png"
+                width={64}
+                height={54}
+                alt=""
                 aria-hidden="true"
+                className="h-12 w-14 object-contain"
               />
-              Primaveral
+              <span className="font-script text-2xl leading-tight font-medium text-[#875f00]">
+                Primaveral
+              </span>
             </div>
           )}
           {item.fulfillmentType === "SOURCED_TO_ORDER" && (
@@ -115,30 +120,37 @@ export default function Menu() {
     isLoading,
     error,
   } = api.menu.getPublicMenuItems.useQuery();
-  const categories = useMemo(
-    () => ["Todos", ...new Set(products.map((item) => item.category))],
-    [products],
-  );
   const featuredProduct =
     products.find((item) => item.featured && item.image) ??
     products.find((item) => item.image);
+  const collectionProducts = useMemo(
+    () =>
+      featuredProduct
+        ? products.filter((item) => item.id !== featuredProduct.id)
+        : products,
+    [featuredProduct, products],
+  );
+  const collectionCategories = useMemo(
+    () => [
+      "Todos",
+      ...new Set(collectionProducts.map((item) => item.category)),
+    ],
+    [collectionProducts],
+  );
   const filtered = useMemo(
     () =>
-      products.filter(
+      collectionProducts.filter(
         (item) =>
           (category === "Todos" || item.category === category) &&
           normalizeSearchText(item.name).includes(normalizeSearchText(query)),
       ),
-    [products, category, query],
+    [collectionProducts, category, query],
   );
 
   return (
     <main className="min-w-0">
       <section className="mx-auto grid max-w-7xl gap-8 px-4 pt-8 pb-14 sm:px-6 sm:pt-12 sm:pb-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10 lg:px-10 lg:pt-16">
         <div className="min-w-0">
-          <p className="text-store-brand mb-4 text-base font-semibold">
-            Bordados hechos a mano en Cartago
-          </p>
           <h1 className="font-display text-store-brand max-w-3xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
             Arte que se viste, tradición que perdura.
           </h1>
@@ -157,7 +169,7 @@ export default function Menu() {
           <div className="bg-store-surface relative aspect-[4/3] overflow-hidden rounded-xl">
             <Image
               src="/primaveral-floral.jpg"
-              alt="Primaveral Bordados de Cartago"
+              alt="Prenda bordada de Primaveral"
               fill
               priority
               sizes="(min-width: 1024px) 55vw, 100vw"
@@ -240,7 +252,7 @@ export default function Menu() {
           aria-label="Filtrar prendas por categoría"
           className="flex flex-wrap gap-2 py-6"
         >
-          {categories.map((item) => (
+          {collectionCategories.map((item) => (
             <button
               key={item}
               onClick={() => setCategory(item)}

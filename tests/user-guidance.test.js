@@ -110,7 +110,10 @@ test("catalog search treats accented and unaccented Spanish words alike", () => 
 test("the catalog only offers category filters present in the real inventory", async () => {
   const source = await readSource("src/components/main/menu.tsx");
 
-  assert.match(source, /products\.map\(\(item\) => item\.category\)/);
+  assert.match(
+    source,
+    /collectionProducts\.map\(\(item\) => item\.category\)/,
+  );
   assert.match(source, /\{item\.name\}/);
   assert.doesNotMatch(source, /const categories = \["Todos", "Bordados"/);
 });
@@ -227,6 +230,15 @@ test("the homepage logo stays visible independently of the featured product", as
     source,
     /aria-label="Producto destacado"[\s\S]*?featuredProduct\.image/,
   );
+  assert.match(
+    source,
+    /collectionProducts\s*=\s*useMemo[\s\S]*?item\.id\s*!==\s*featuredProduct\.id/,
+  );
+  assert.doesNotMatch(source, /Bordados hechos a mano en Cartago/);
+  assert.doesNotMatch(source, /Primaveral Bordados de Cartago/);
+  assert.match(source, /src="\/primaveral-flower\.png"/);
+  assert.doesNotMatch(source, /<Flower2/);
+  assert.match(source, /font-script[^"]*text-\[#875f00\]/);
 });
 
 test("public order tracking supports guest lookup and update emails link directly to the order", async () => {
@@ -274,6 +286,10 @@ test("the shared footer provides the supplied business contacts and social links
     footer,
     /https:\/\/www\.instagram\.com\/bordadosdecartagoenmedellin\//,
   );
+  assert.doesNotMatch(footer, /Seguimiento de pedidos|\/orders\/track/);
+  assert.match(footer, /src="\/primaveral-flower\.png"/);
+  assert.doesNotMatch(footer, /Flower2/);
+  assert.match(footer, /font-script[^"]*text-\[#875f00\]/);
   assert.match(layout, /<SiteFooter\s*\/>/);
 });
 
@@ -305,6 +321,9 @@ test("account and checkout pages use the shared botanical theme", async () => {
   ]);
 
   for (const source of pages) assert.match(source, /botanical-page/);
+  assert.match(pages[0], /src="\/primaveral-flower\.png"/);
+  assert.doesNotMatch(pages[0], /Flower2/);
+  assert.match(pages[0], /font-script[^"]*text-\[#875f00\]/);
   assert.match(styles, /\.botanical-page\s*\{[\s\S]*background-image:/);
   assert.match(styles, /oklch\(0\.82 0\.09 355/);
   assert.match(styles, /oklch\(0\.82 0\.07 145/);

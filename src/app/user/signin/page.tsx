@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flower2 } from "lucide-react";
+import Image from "next/image";
 import { LoginForm } from "@/components/login-form";
 import { env } from "@/env";
 
@@ -27,9 +27,18 @@ export default async function SignInPage({
         className="flex min-h-12 items-center justify-center gap-3 font-medium text-[#48235c]"
       >
         <span className="grid h-11 w-11 place-items-center rounded-full bg-[#f7e7a9] text-[#48235c]">
-          <Flower2 className="h-6 w-6" aria-hidden="true" />
+          <Image
+            src="/primaveral-flower.png"
+            width={32}
+            height={27}
+            alt=""
+            aria-hidden="true"
+            className="h-7 w-8 object-contain"
+          />
         </span>
-        <span className="font-display text-2xl font-semibold">Primaveral</span>
+        <span className="font-script text-2xl leading-tight font-medium text-[#875f00]">
+          Primaveral
+        </span>
       </Link>
       <LoginForm
         googleEnabled={Boolean(env.OAUTH_CLIENT_ID && env.OAUTH_CLIENT_SECRET)}
