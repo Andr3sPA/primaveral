@@ -14,7 +14,7 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 
 ## Funcionalidades
 
-- Catálogo público con búsqueda, categorías, destacados y detalle de producto.
+- Catálogo público con búsqueda, filtros por Bordados/No bordados y detalle de producto.
 - Identidad visual floral con navegación adaptable, precios COP legibles, imágenes reales y controles amplios.
 - Carrito persistente en el navegador con cantidades y control de stock al crear pedidos.
 - Checkout de invitado o de cuenta verificada, pago al recibir y checkout hospedado de Wompi Sandbox/Producción con confirmación por webhook firmado; la aplicación no recibe ni almacena datos de tarjeta.
@@ -23,7 +23,8 @@ Tienda de ropa bordada construida sobre el proyecto base de restaurante. Mantien
 - Seguimiento público sin iniciar sesión: busca por número y correo de compra o abre el enlace privado de los correos. Los correos de estado y pago llevan directamente al pedido correspondiente.
 - Autenticación con roles `CLIENT`, `EMPLOYEE` y `ADMIN`; el acceso con Google requiere correo verificado y conserva los datos de perfil ya guardados.
 - Panel administrativo en `/admin` con accesos a inventario, alta de productos, pedidos y métricas.
-- Productos con categoría, tallas, colores, imagen, precio, stock y disponibilidad.
+- Cada producto pertenece a Bordados (con un subgrupo obligatorio: Blusas, Vestidos, Faldas, Guayaberas, Conjuntos, Niños o Niñas) o a No bordados (sin subgrupo). La clasificación se administra al crear o editar productos.
+- Productos con tallas, colores, imagen, precio, stock y disponibilidad.
 - Cada producto puede marcarse como `Envío inmediato` o `Traer por encargo`. El administrador configura el plazo en días calendario (de 0 a 365, incluidos plazos de 30 días o más); se muestra en la ficha, bolsa y checkout, y se guarda como una copia en cada pedido para que cambios posteriores al producto no alteren pedidos existentes.
 
 ### Pagos Wompi: Sandbox y Producción

@@ -7,6 +7,8 @@ import {
 } from "@/server/api/trpc";
 import {
   FulfillmentType,
+  EmbroiderySubgroup,
+  ProductGroup,
   ProductPublicationStatus,
   PublicationPlatform,
   type MenuItem,
@@ -18,7 +20,7 @@ import {
 } from "@/server/social/publishing";
 import { isProductSocialTargetEnabled } from "@/lib/social-targets";
 
-export const productInputSchema = z.object({
+const productInputFields = z.object({
   name: z
     .string()
     .trim()
@@ -29,7 +31,8 @@ export const productInputSchema = z.object({
   price: z.number().finite().positive("El precio debe ser mayor a cero"),
   image: z.string().url().nullable().optional(),
   images: z.array(z.string().url()).max(8).default([]),
-  category: z.string().trim().min(2).default("Novedades"),
+  productGroup: z.nativeEnum(ProductGroup),
+  embroiderySubgroup: z.nativeEnum(EmbroiderySubgroup).nullable(),
   sizes: z.array(z.string().trim().min(1)).max(12).default([]),
   colors: z.array(z.string().trim().min(1)).max(12).default([]),
   stock: z.number().int().min(0).max(100000).default(0),
@@ -40,6 +43,31 @@ export const productInputSchema = z.object({
   leadTimeDays: z.number().int().min(0).max(365).default(0),
   requiresAvailabilityConfirmation: z.boolean().default(false),
 });
+
+function validateProductGroup(
+  product: Pick<
+    z.infer<typeof productInputFields>,
+    "productGroup" | "embroiderySubgroup"
+  >,
+  context: z.RefinementCtx,
+) {
+  if (
+    (product.productGroup === ProductGroup.BORDADOS) !==
+    (product.embroiderySubgroup !== null)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["embroiderySubgroup"],
+      message:
+        product.productGroup === ProductGroup.BORDADOS
+          ? "Selecciona un subgrupo para los productos bordados"
+          : "Los productos no bordados no tienen subgrupo",
+    });
+  }
+}
+
+export const productInputSchema =
+  productInputFields.superRefine(validateProductGroup);
 
 type ProductPublicationState = Pick<
   MenuItem,
@@ -153,10 +181,12 @@ async function synchronizeProductPublications(
 export const menuRouter = createTRPCRouter({
   registerMenuItem: adminProcedure
     .input(
-      productInputSchema.extend({
-        autoPublishToFacebook: z.boolean().default(false),
-        autoPublishToInstagram: z.boolean().default(false),
-      }),
+      productInputFields
+        .extend({
+          autoPublishToFacebook: z.boolean().default(false),
+          autoPublishToInstagram: z.boolean().default(false),
+        })
+        .superRefine(validateProductGroup),
     )
     .mutation(({ ctx, input }) =>
       ctx.db.$transaction(async (transaction) => {
@@ -169,7 +199,11 @@ export const menuRouter = createTRPCRouter({
     ),
 
   updateMenuItem: adminProcedure
-    .input(productInputSchema.extend({ id: z.string().cuid() }))
+    .input(
+      productInputFields
+        .extend({ id: z.string().cuid() })
+        .superRefine(validateProductGroup),
+    )
     .mutation(async ({ ctx, input }) =>
       ctx.db.$transaction(async (transaction) => {
         const { id, ...data } = input;

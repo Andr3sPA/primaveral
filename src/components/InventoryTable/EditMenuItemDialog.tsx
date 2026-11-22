@@ -18,6 +18,12 @@ import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/react";
 import { ProductImageManager } from "@/components/product-image-manager";
 import { getProductImages } from "@/lib/product-images";
+import {
+  EMBROIDERY_SUBGROUPS,
+  PRODUCT_GROUPS,
+  type EmbroiderySubgroup,
+  type ProductGroup,
+} from "@/lib/product-categories";
 
 type MenuItem = RouterOutputs["menu"]["getMenuItems"][number];
 
@@ -37,6 +43,11 @@ export default function EditMenuItemDialog({
   const [images, setImages] = React.useState(
     getProductImages(menuItem.image, menuItem.images),
   );
+  const [productGroup, setProductGroup] = React.useState<ProductGroup>(
+    menuItem.productGroup,
+  );
+  const [embroiderySubgroup, setEmbroiderySubgroup] =
+    React.useState<EmbroiderySubgroup | null>(menuItem.embroiderySubgroup);
   const [isUploadingImages, setIsUploadingImages] = React.useState(false);
   const [
     requiresAvailabilityConfirmation,
@@ -79,7 +90,8 @@ export default function EditMenuItemDialog({
       price: parseFloat(price),
       image: images[0] ?? null,
       images,
-      category: menuItem.category,
+      productGroup,
+      embroiderySubgroup,
       sizes: menuItem.sizes,
       colors: menuItem.colors,
       stock: menuItem.stock,
@@ -152,6 +164,55 @@ export default function EditMenuItemDialog({
             onChange={setImages}
             onUploadingChange={setIsUploadingImages}
           />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="productGroup">Grupo</Label>
+              <select
+                id="productGroup"
+                value={productGroup}
+                onChange={(event) => {
+                  const nextGroup = event.currentTarget.value as ProductGroup;
+                  setProductGroup(nextGroup);
+                  setEmbroiderySubgroup(
+                    nextGroup === "BORDADOS" ? "BLUSAS" : null,
+                  );
+                }}
+                className="border-input bg-background mt-1 h-10 w-full rounded-md border px-3 text-sm"
+              >
+                {PRODUCT_GROUPS.map((group) => (
+                  <option key={group.value} value={group.value}>
+                    {group.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {productGroup === "BORDADOS" && (
+              <div>
+                <Label htmlFor="embroiderySubgroup">Subgrupo</Label>
+                <select
+                  id="embroiderySubgroup"
+                  value={embroiderySubgroup ?? ""}
+                  required
+                  onChange={(event) =>
+                    setEmbroiderySubgroup(
+                      (event.currentTarget.value ||
+                        null) as EmbroiderySubgroup | null,
+                    )
+                  }
+                  className="border-input bg-background mt-1 h-10 w-full rounded-md border px-3 text-sm"
+                >
+                  <option value="" disabled>
+                    Selecciona un subgrupo
+                  </option>
+                  {EMBROIDERY_SUBGROUPS.map((subgroup) => (
+                    <option key={subgroup.value} value={subgroup.value}>
+                      {subgroup.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
           <div className="space-y-3">
             <p className="text-sm font-medium">
               El producto siempre se muestra en la página web. Redes sociales:

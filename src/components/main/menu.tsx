@@ -2,12 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowRight,
-  MessageCircle,
-  Search,
-  ShoppingBag,
-} from "lucide-react";
+import { ArrowRight, MessageCircle, Search, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
@@ -19,8 +14,16 @@ import {
   createAvailabilityWhatsAppUrl,
   WHATSAPP_CHAT_URL,
 } from "@/lib/social-links";
+import {
+  EMBROIDERY_SUBGROUPS,
+  PRODUCT_GROUPS,
+  getProductCategoryLabel,
+  type EmbroiderySubgroup,
+  type ProductGroup,
+} from "@/lib/product-categories";
 
 type Product = RouterOutputs["menu"]["getPublicMenuItems"][number];
+type SelectedGroup = ProductGroup | "ALL";
 
 function ProductCard({ item }: { item: Product }) {
   const { addItem } = useCart();
@@ -62,7 +65,12 @@ function ProductCard({ item }: { item: Product }) {
             <h3 className="font-medium break-words text-[#35203f]">
               {item.name}
             </h3>
-            <p className="mt-1 text-base text-[#514060]">{item.category}</p>
+            <p className="mt-1 text-base text-[#514060]">
+              {getProductCategoryLabel(
+                item.productGroup,
+                item.embroiderySubgroup,
+              )}
+            </p>
           </div>
           <p className="store-price text-store-ink shrink-0 text-right font-semibold">
             {formatCOP(item.price)}
@@ -114,7 +122,10 @@ function ProductCard({ item }: { item: Product }) {
 
 export default function Menu() {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("Todos");
+  const [selectedGroup, setSelectedGroup] = useState<SelectedGroup>("ALL");
+  const [selectedSubgroup, setSelectedSubgroup] = useState<
+    EmbroiderySubgroup | "ALL"
+  >("ALL");
   const {
     data: products = [],
     isLoading,
@@ -130,21 +141,16 @@ export default function Menu() {
         : products,
     [featuredProduct, products],
   );
-  const collectionCategories = useMemo(
-    () => [
-      "Todos",
-      ...new Set(collectionProducts.map((item) => item.category)),
-    ],
-    [collectionProducts],
-  );
   const filtered = useMemo(
     () =>
       collectionProducts.filter(
         (item) =>
-          (category === "Todos" || item.category === category) &&
+          (selectedGroup === "ALL" || item.productGroup === selectedGroup) &&
+          (selectedSubgroup === "ALL" ||
+            item.embroiderySubgroup === selectedSubgroup) &&
           normalizeSearchText(item.name).includes(normalizeSearchText(query)),
       ),
-    [collectionProducts, category, query],
+    [collectionProducts, query, selectedGroup, selectedSubgroup],
   );
 
   return (
@@ -249,19 +255,43 @@ export default function Menu() {
         </div>
         <div
           role="group"
-          aria-label="Filtrar prendas por categoría"
+          aria-label="Filtrar prendas por grupo y subgrupo"
           className="flex flex-wrap gap-2 py-6"
         >
-          {collectionCategories.map((item) => (
+          <button
+            onClick={() => {
+              setSelectedGroup("ALL");
+              setSelectedSubgroup("ALL");
+            }}
+            aria-pressed={selectedGroup === "ALL"}
+            className={`min-h-11 rounded-full px-4 py-2 text-base transition ${selectedGroup === "ALL" ? "bg-[#48235c] font-semibold text-white" : "bg-[#f2eaf5] text-[#48235c] hover:bg-[#e9dced]"}`}
+          >
+            Todos
+          </button>
+          {PRODUCT_GROUPS.map((group) => (
             <button
-              key={item}
-              onClick={() => setCategory(item)}
-              aria-pressed={category === item}
-              className={`min-h-11 rounded-full px-4 py-2 text-base transition ${category === item ? "bg-[#48235c] font-semibold text-white" : "bg-[#f2eaf5] text-[#48235c] hover:bg-[#e9dced]"}`}
+              key={group.value}
+              onClick={() => {
+                setSelectedGroup(group.value);
+                setSelectedSubgroup("ALL");
+              }}
+              aria-pressed={selectedGroup === group.value}
+              className={`min-h-11 rounded-full px-4 py-2 text-base transition ${selectedGroup === group.value ? "bg-[#48235c] font-semibold text-white" : "bg-[#f2eaf5] text-[#48235c] hover:bg-[#e9dced]"}`}
             >
-              {item}
+              {group.label}
             </button>
           ))}
+          {selectedGroup === "BORDADOS" &&
+            EMBROIDERY_SUBGROUPS.map((subgroup) => (
+              <button
+                key={subgroup.value}
+                onClick={() => setSelectedSubgroup(subgroup.value)}
+                aria-pressed={selectedSubgroup === subgroup.value}
+                className={`min-h-11 rounded-full px-4 py-2 text-base transition ${selectedSubgroup === subgroup.value ? "bg-[#875f00] font-semibold text-white" : "bg-[#f8f2e4] text-[#48235c] hover:bg-[#efe4c8]"}`}
+              >
+                {subgroup.label}
+              </button>
+            ))}
         </div>
         {isLoading ? (
           <div
