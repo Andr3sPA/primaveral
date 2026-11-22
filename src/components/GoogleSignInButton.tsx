@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { isGoogleOAuthInAppBrowser } from "@/lib/google-oauth-browser";
 
 export function GoogleSignInButton({ enabled }: { enabled: boolean }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    setInAppBrowser(isGoogleOAuthInAppBrowser(navigator.userAgent));
+  }, []);
 
   const startSignIn = () => {
     setPending(true);
@@ -43,6 +49,13 @@ export function GoogleSignInButton({ enabled }: { enabled: boolean }) {
       {error && (
         <p role="alert" className="text-sm text-red-600">
           {error}
+        </p>
+      )}
+      {inAppBrowser && (
+        <p role="note" className="text-muted-foreground text-center text-sm">
+          Google puede bloquear el acceso desde el navegador integrado de
+          algunas aplicaciones. Abre esta página en Chrome o Safari (menú de la
+          aplicación → Abrir en el navegador) y vuelve a intentarlo.
         </p>
       )}
       {!enabled && (

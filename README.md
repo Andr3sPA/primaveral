@@ -110,6 +110,12 @@ Para activar el inicio de sesión con Google, configura `OAUTH_CLIENT_ID` y
 `OAUTH_CLIENT_SECRET` en el entorno de servidor. Ambos valores deben estar
 presentes juntos. La aplicación solicita solo el acceso predeterminado de
 Google para `openid`, correo y perfil básico.
+En móviles se usa el mismo flujo web. Google puede bloquearlo si la página se
+abre dentro del navegador integrado de otra aplicación; en ese caso, abre el
+sitio en Safari o Chrome y vuelve a intentarlo. En Google Cloud, el URI de
+redirección autorizado debe coincidir con el dominio canónico de la aplicación
+y terminar en `/api/auth/callback/google`; no se requiere un cliente OAuth
+móvil independiente.
 
 La aplicación envía a Brevo el enlace directo a `APP_URL` y no configura
 seguimiento de clics en la solicitud. No podemos ver desde el código si el
