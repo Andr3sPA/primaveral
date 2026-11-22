@@ -5,6 +5,7 @@ import {
   BarChart3,
   Boxes,
   ChevronRight,
+  Fingerprint,
   PackagePlus,
   Share2,
   ShoppingBag,
@@ -46,6 +47,13 @@ export default function AdminPage() {
       title: "Redes sociales",
       description: "Publicación automática y estados",
       value: "Facebook e Instagram",
+    },
+    {
+      href: "/admin/watermark",
+      icon: Fingerprint,
+      title: "Marca de agua invisible",
+      description: "Guarda texto en los píxeles y descarga la imagen",
+      value: "Herramienta privada",
     },
     {
       href: "/metrics",

@@ -6,6 +6,13 @@ import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { WatermarkControls } from "@/components/watermark-controls";
+import {
+  DEFAULT_WATERMARK_POSITION,
+  DEFAULT_WATERMARK_SIZE,
+  type WatermarkPosition,
+  type WatermarkSize,
+} from "@/lib/watermark-options";
 
 const MAX_IMAGES = 8;
 
@@ -20,6 +27,12 @@ export function ProductImageManager({
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [watermarkText, setWatermarkText] = useState("");
+  const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>(
+    DEFAULT_WATERMARK_POSITION,
+  );
+  const [watermarkSizePercent, setWatermarkSizePercent] =
+    useState<WatermarkSize>(DEFAULT_WATERMARK_SIZE);
 
   async function uploadFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -45,6 +58,11 @@ export function ProductImageManager({
       for (const file of Array.from(files)) {
         const body = new FormData();
         body.append("file", file);
+        if (watermarkText.trim()) {
+          body.append("watermarkText", watermarkText);
+          body.append("watermarkPosition", watermarkPosition);
+          body.append("watermarkSizePercent", String(watermarkSizePercent));
+        }
         const response = await fetch("/api/upload", {
           method: "POST",
           body,
@@ -108,6 +126,20 @@ export function ProductImageManager({
           JPG, PNG o WebP; máximo 8 MB por foto.
         </p>
       </div>
+      <WatermarkControls
+        idPrefix="product-watermark"
+        text={watermarkText}
+        position={watermarkPosition}
+        sizePercent={watermarkSizePercent}
+        disabled={isUploading}
+        onTextChange={setWatermarkText}
+        onPositionChange={setWatermarkPosition}
+        onSizeChange={setWatermarkSizePercent}
+      />
+      <p className="text-muted-foreground text-xs">
+        Estos ajustes se aplican a cada archivo nuevo que selecciones. Las fotos
+        ya guardadas y las que agregues mediante URL no se modifican.
+      </p>
       <Input
         type="file"
         accept="image/jpeg,image/png,image/webp"
@@ -121,7 +153,7 @@ export function ProductImageManager({
       />
       {isUploading && (
         <p role="status" className="text-sm text-[#514060]">
-          Subiendo fotos…
+          Procesando y subiendo fotos…
         </p>
       )}
       <div className="flex gap-2">
