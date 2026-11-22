@@ -2,6 +2,7 @@
 import { MenuItemDetails } from "@/components/menu-item/menu-item-details";
 import { api } from "@/trpc/server";
 import Link from "next/link";
+import { getProductCategoryLabel } from "@/lib/product-categories";
 
 export default async function MenuItemPage({
   params,
@@ -30,7 +31,10 @@ export default async function MenuItemPage({
             stockCount={item.stock}
             imageUrl={item.image ?? undefined}
             images={item.images}
-            category={item.category}
+            category={getProductCategoryLabel(
+              item.productGroup,
+              item.embroiderySubgroup,
+            )}
             sizes={item.sizes ?? []}
             colors={item.colors ?? []}
             fulfillmentType={item.fulfillmentType}

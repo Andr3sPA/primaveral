@@ -478,6 +478,8 @@ test("product delivery estimates accept 30+ calendar days up to the configured l
   const product = productInputSchema.parse({
     name: "Prenda por encargo",
     price: 25000,
+    productGroup: "BORDADOS",
+    embroiderySubgroup: "BLUSAS",
     fulfillmentType: "SOURCED_TO_ORDER",
     leadTimeDays: 45,
   });
@@ -487,8 +489,53 @@ test("product delivery estimates accept 30+ calendar days up to the configured l
     productInputSchema.safeParse({
       name: "Plazo fuera del límite",
       price: 25000,
+      productGroup: "BORDADOS",
+      embroiderySubgroup: "BLUSAS",
       fulfillmentType: "SOURCED_TO_ORDER",
       leadTimeDays: 366,
+    }).success,
+    false,
+  );
+});
+
+test("product groups require exactly one embroidery subgroup only for Bordados", () => {
+  const validEmbroidered = productInputSchema.safeParse({
+    name: "Blusa bordada",
+    price: 25000,
+    productGroup: "BORDADOS",
+    embroiderySubgroup: "BLUSAS",
+  });
+  const validNonEmbroidered = productInputSchema.safeParse({
+    name: "Camisa lisa",
+    price: 25000,
+    productGroup: "NO_BORDADOS",
+    embroiderySubgroup: null,
+  });
+
+  assert.equal(validEmbroidered.success, true);
+  assert.equal(validNonEmbroidered.success, true);
+  assert.equal(
+    productInputSchema.safeParse({
+      name: "Sin grupo",
+      price: 25000,
+    }).success,
+    false,
+  );
+  assert.equal(
+    productInputSchema.safeParse({
+      name: "Bordado sin subgrupo",
+      price: 25000,
+      productGroup: "BORDADOS",
+      embroiderySubgroup: null,
+    }).success,
+    false,
+  );
+  assert.equal(
+    productInputSchema.safeParse({
+      name: "No bordado con subgrupo",
+      price: 25000,
+      productGroup: "NO_BORDADOS",
+      embroiderySubgroup: "BLUSAS",
     }).success,
     false,
   );
@@ -1175,6 +1222,8 @@ test("product names preserve Spanish accents and ñ through API validation", () 
   const product = productInputSchema.parse({
     name: "  Bolso Rai\u0301z y Niño  ",
     price: 25000,
+    productGroup: "NO_BORDADOS",
+    embroiderySubgroup: null,
   });
 
   assert.equal(product.name, "Bolso Raíz y Niño");

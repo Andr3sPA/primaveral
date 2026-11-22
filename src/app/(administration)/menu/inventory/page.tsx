@@ -8,6 +8,7 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getProductCategoryLabel } from "@/lib/product-categories";
 
 export default function InventoryPage() {
   const utils = api.useUtils();
@@ -82,7 +83,11 @@ export default function InventoryPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{product.name}</p>
                   <p className="mt-1 text-sm text-stone-500">
-                    {product.category} · {product.currency}
+                    {getProductCategoryLabel(
+                      product.productGroup,
+                      product.embroiderySubgroup,
+                    )}{" "}
+                    · {product.currency}
                     {product.price.toFixed(2)}
                   </p>
                   <button

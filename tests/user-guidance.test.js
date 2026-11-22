@@ -90,13 +90,14 @@ test("checkout offers cash and enables Wompi only for configured Sandbox", async
   assert.doesNotMatch(source, /Tarjeta \(próximamente\)/);
 });
 
-test("catalog search and category filters have clear accessible names", async () => {
+test("catalog search and group filters have clear accessible names", async () => {
   const source = await readSource("src/components/main/menu.tsx");
 
   assert.match(source, /htmlFor="catalog-search"/);
   assert.match(source, /id="catalog-search"/);
-  assert.match(source, /aria-label="Filtrar prendas por categoría"/);
-  assert.match(source, /aria-pressed=\{category === item\}/);
+  assert.match(source, /aria-label="Filtrar prendas por grupo y subgrupo"/);
+  assert.match(source, /aria-pressed=\{selectedGroup === group\.value\}/);
+  assert.match(source, /selectedSubgroup === subgroup\.value/);
 });
 
 test("catalog search treats accented and unaccented Spanish words alike", () => {
@@ -107,15 +108,14 @@ test("catalog search treats accented and unaccented Spanish words alike", () => 
   assert.equal(normalizeSearchText("niño"), normalizeSearchText("NINO"));
 });
 
-test("the catalog only offers category filters present in the real inventory", async () => {
+test("the catalog filters products using their configured group and subgroup", async () => {
   const source = await readSource("src/components/main/menu.tsx");
 
-  assert.match(
-    source,
-    /collectionProducts\.map\(\(item\) => item\.category\)/,
-  );
+  assert.match(source, /PRODUCT_GROUPS\.map\(\(group\) =>/);
+  assert.match(source, /EMBROIDERY_SUBGROUPS\.map\(\(subgroup\) =>/);
+  assert.match(source, /item\.productGroup === selectedGroup/);
+  assert.match(source, /item\.embroiderySubgroup === selectedSubgroup/);
   assert.match(source, /\{item\.name\}/);
-  assert.doesNotMatch(source, /const categories = \["Todos", "Bordados"/);
 });
 
 test("the global navigation makes the cart count and mobile menu accessible", async () => {
@@ -321,9 +321,11 @@ test("account and checkout pages use the shared botanical theme", async () => {
   ]);
 
   for (const source of pages) assert.match(source, /botanical-page/);
-  assert.match(pages[0], /src="\/primaveral-flower\.png"/);
-  assert.doesNotMatch(pages[0], /Flower2/);
-  assert.match(pages[0], /font-script[^"]*text-\[#875f00\]/);
+  const signInPage = pages[0];
+  assert.ok(signInPage);
+  assert.match(signInPage, /src="\/primaveral-flower\.png"/);
+  assert.doesNotMatch(signInPage, /Flower2/);
+  assert.match(signInPage, /font-script[^"]*text-\[#875f00\]/);
   assert.match(styles, /\.botanical-page\s*\{[\s\S]*background-image:/);
   assert.match(styles, /oklch\(0\.82 0\.09 355/);
   assert.match(styles, /oklch\(0\.82 0\.07 145/);
