@@ -1,10 +1,16 @@
 "use client";
 
-import { Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "@/trpc/react";
 import { formatCOP } from "@/lib/format-currency";
 import { ProductCard } from "@/components/product-card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   filterCatalogProducts,
   getCatalogFilterOptions,
@@ -24,25 +30,82 @@ function toggleSelection<T>(selected: T[], value: T) {
     : [...selected, value];
 }
 
-function FilterCheckbox({
-  checked,
+function MultiselectFilter<T extends string>({
   label,
-  onChange,
+  options,
+  selected,
+  getLabel,
+  onToggle,
 }: {
-  checked: boolean;
   label: string;
-  onChange: () => void;
+  options: readonly T[];
+  selected: readonly T[];
+  getLabel: (value: T) => string;
+  onToggle: (value: T) => void;
 }) {
+  const summary =
+    selected.length === 0
+      ? label
+      : selected.length === 1
+        ? getLabel(selected[0]!)
+        : `${selected.length} seleccionados`;
+
   return (
-    <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm text-[#35203f] hover:bg-[#f8f4f9]">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-4 w-4 accent-[#48235c]"
-      />
-      <span>{label}</span>
-    </label>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${label}: ${summary}`}
+          className="flex min-h-12 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#cdbdd2] bg-white px-3 text-left text-sm font-semibold text-[#35203f] shadow-sm transition hover:border-[#684281] hover:bg-[#fdfbfe] focus-visible:ring-2 focus-visible:ring-[#684281] focus-visible:outline-none"
+        >
+          <span className="min-w-0 truncate">{summary}</span>
+          {selected.length > 0 && (
+            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#48235c] text-xs text-white">
+              {selected.length}
+            </span>
+          )}
+          <ChevronDown
+            className="size-4 shrink-0 text-[#684281]"
+            aria-hidden="true"
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-[calc(100vw-2rem)] max-w-[18rem] border-[#e7dbea] bg-[#fffdf8] p-2"
+      >
+        <fieldset>
+          <legend className="px-2 pb-2 text-sm font-semibold text-[#35203f]">
+            {label}
+          </legend>
+          <div className="max-h-[min(18rem,60vh)] overflow-y-auto">
+            {options.map((option) => {
+              const checked = selected.includes(option);
+              const optionLabel = getLabel(option);
+              const id = `catalog-${label}-${option}`
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-");
+              return (
+                <label
+                  key={option}
+                  htmlFor={id}
+                  className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-[#35203f] hover:bg-[#f5eaf4]"
+                >
+                  <Checkbox
+                    id={id}
+                    checked={checked}
+                    onCheckedChange={() => onToggle(option)}
+                    className="size-5"
+                  />
+                  <span>{optionLabel}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -197,7 +260,7 @@ export default function Catalog() {
             </div>
           </div>
         </div>
-        <div className="mt-5 rounded-2xl border border-[#e7dbea] bg-white p-4 sm:p-5">
+        <div className="mt-5 mb-10 rounded-2xl border border-[#e7dbea] bg-white p-4 sm:mb-12 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <SlidersHorizontal
@@ -240,131 +303,102 @@ export default function Catalog() {
           <div
             role="group"
             aria-label="Filtros de productos"
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-6"
           >
             {options.groups.length > 0 && (
-              <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3">
-                <legend className="px-1 text-sm font-semibold text-[#35203f]">
-                  Grupo
-                </legend>
-                {PRODUCT_GROUPS.filter((group) =>
+              <MultiselectFilter
+                label="Grupo"
+                options={PRODUCT_GROUPS.filter((group) =>
                   options.groups.includes(group.value),
-                ).map((group) => (
-                  <FilterCheckbox
-                    key={group.value}
-                    label={group.label}
-                    checked={selectedGroups.includes(group.value)}
-                    onChange={() =>
-                      setSelectedGroups((selected) =>
-                        toggleSelection(selected, group.value),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
+                ).map((group) => group.value)}
+                selected={selectedGroups}
+                getLabel={(value) =>
+                  PRODUCT_GROUPS.find((group) => group.value === value)
+                    ?.label ?? value
+                }
+                onToggle={(value) =>
+                  setSelectedGroups((selected) =>
+                    toggleSelection(selected, value),
+                  )
+                }
+              />
             )}
             {options.subgroups.length > 0 && (
-              <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3">
-                <legend className="px-1 text-sm font-semibold text-[#35203f]">
-                  Subgrupo
-                </legend>
-                {EMBROIDERY_SUBGROUPS.filter((subgroup) =>
+              <MultiselectFilter
+                label="Subgrupo"
+                options={EMBROIDERY_SUBGROUPS.filter((subgroup) =>
                   options.subgroups.includes(subgroup.value),
-                ).map((subgroup) => (
-                  <FilterCheckbox
-                    key={subgroup.value}
-                    label={subgroup.label}
-                    checked={selectedSubgroups.includes(subgroup.value)}
-                    onChange={() =>
-                      setSelectedSubgroups((selected) =>
-                        toggleSelection(selected, subgroup.value),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
+                ).map((subgroup) => subgroup.value)}
+                selected={selectedSubgroups}
+                getLabel={(value) =>
+                  EMBROIDERY_SUBGROUPS.find(
+                    (subgroup) => subgroup.value === value,
+                  )?.label ?? value
+                }
+                onToggle={(value) =>
+                  setSelectedSubgroups((selected) =>
+                    toggleSelection(selected, value),
+                  )
+                }
+              />
             )}
             {options.availability.length > 0 && (
-              <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3">
-                <legend className="px-1 text-sm font-semibold text-[#35203f]">
-                  Disponibilidad
-                </legend>
-                {options.availability.map((availability) => (
-                  <FilterCheckbox
-                    key={availability}
-                    label={
-                      availability === "available" ? "Disponible" : "Agotado"
-                    }
-                    checked={selectedAvailability.includes(availability)}
-                    onChange={() =>
-                      setSelectedAvailability((selected) =>
-                        toggleSelection(selected, availability),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
+              <MultiselectFilter
+                label="Disponibilidad"
+                options={options.availability}
+                selected={selectedAvailability}
+                getLabel={(value) =>
+                  value === "available" ? "Disponible" : "Agotado"
+                }
+                onToggle={(value) =>
+                  setSelectedAvailability((selected) =>
+                    toggleSelection(selected, value),
+                  )
+                }
+              />
             )}
             {options.sizes.length > 0 && (
-              <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3">
-                <legend className="px-1 text-sm font-semibold text-[#35203f]">
-                  Tallas
-                </legend>
-                {options.sizes.map((size) => (
-                  <FilterCheckbox
-                    key={size}
-                    label={size}
-                    checked={selectedSizes.includes(size)}
-                    onChange={() =>
-                      setSelectedSizes((selected) =>
-                        toggleSelection(selected, size),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
+              <MultiselectFilter
+                label="Tallas"
+                options={options.sizes}
+                selected={selectedSizes}
+                getLabel={(value) => value}
+                onToggle={(value) =>
+                  setSelectedSizes((selected) =>
+                    toggleSelection(selected, value),
+                  )
+                }
+              />
             )}
             {options.colors.length > 0 && (
-              <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3">
-                <legend className="px-1 text-sm font-semibold text-[#35203f]">
-                  Colores
-                </legend>
-                {options.colors.map((color) => (
-                  <FilterCheckbox
-                    key={color}
-                    label={color}
-                    checked={selectedColors.includes(color)}
-                    onChange={() =>
-                      setSelectedColors((selected) =>
-                        toggleSelection(selected, color),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
+              <MultiselectFilter
+                label="Colores"
+                options={options.colors}
+                selected={selectedColors}
+                getLabel={(value) => value}
+                onToggle={(value) =>
+                  setSelectedColors((selected) =>
+                    toggleSelection(selected, value),
+                  )
+                }
+              />
             )}
             {options.fulfillmentTypes.length > 0 && (
-              <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3">
-                <legend className="px-1 text-sm font-semibold text-[#35203f]">
-                  Modalidad
-                </legend>
-                {options.fulfillmentTypes.map((fulfillmentType) => (
-                  <FilterCheckbox
-                    key={fulfillmentType}
-                    label={
-                      fulfillmentType === "SOURCED_TO_ORDER"
-                        ? "Por encargo"
-                        : "Envío inmediato"
-                    }
-                    checked={selectedFulfillmentTypes.includes(fulfillmentType)}
-                    onChange={() =>
-                      setSelectedFulfillmentTypes((selected) =>
-                        toggleSelection(selected, fulfillmentType),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
+              <MultiselectFilter
+                label="Modalidad"
+                options={options.fulfillmentTypes}
+                selected={selectedFulfillmentTypes}
+                getLabel={(value) =>
+                  value === "SOURCED_TO_ORDER"
+                    ? "Por encargo"
+                    : "Envío inmediato"
+                }
+                onToggle={(value) =>
+                  setSelectedFulfillmentTypes((selected) =>
+                    toggleSelection(selected, value),
+                  )
+                }
+              />
             )}
             {options.minPrice !== null && options.maxPrice !== null && (
               <fieldset className="min-w-0 rounded-xl border border-[#eee5f0] p-3 sm:col-span-2">
