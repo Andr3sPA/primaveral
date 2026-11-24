@@ -90,14 +90,22 @@ test("checkout offers cash and enables Wompi only for configured Sandbox", async
   assert.doesNotMatch(source, /Tarjeta \(próximamente\)/);
 });
 
-test("catalog search and group filters have clear accessible names", async () => {
+test("catalog search and combinable filters have clear accessible names", async () => {
   const source = await readSource("src/components/main/menu.tsx");
 
   assert.match(source, /htmlFor="catalog-search"/);
   assert.match(source, /id="catalog-search"/);
-  assert.match(source, /aria-label="Filtrar prendas por grupo y subgrupo"/);
-  assert.match(source, /aria-pressed=\{selectedGroup === group\.value\}/);
-  assert.match(source, /selectedSubgroup === subgroup\.value/);
+  assert.match(source, /aria-label="Filtros de productos"/);
+  assert.match(
+    source,
+    /legend className="px-1 text-sm font-semibold[^"]*">\s*Grupo/,
+  );
+  assert.match(
+    source,
+    /legend className="px-1 text-sm font-semibold[^"]*">\s*Subgrupo/,
+  );
+  assert.match(source, /aria-live="polite"/);
+  assert.match(source, /Limpiar filtros/);
 });
 
 test("catalog search treats accented and unaccented Spanish words alike", () => {
@@ -111,10 +119,13 @@ test("catalog search treats accented and unaccented Spanish words alike", () => 
 test("the catalog filters products using their configured group and subgroup", async () => {
   const source = await readSource("src/components/main/menu.tsx");
 
-  assert.match(source, /PRODUCT_GROUPS\.map\(\(group\) =>/);
-  assert.match(source, /EMBROIDERY_SUBGROUPS\.map\(\(subgroup\) =>/);
-  assert.match(source, /item\.productGroup === selectedGroup/);
-  assert.match(source, /item\.embroiderySubgroup === selectedSubgroup/);
+  assert.match(source, /getCatalogFilterOptions\(products\)/);
+  assert.match(source, /options\.groups\.includes\(group\.value\)/);
+  assert.match(source, /options\.subgroups\.includes\(subgroup\.value\)/);
+  assert.match(
+    source,
+    /filterCatalogProducts\(collectionProducts,\s*filters\)/,
+  );
   assert.match(source, /\{item\.name\}/);
 });
 
