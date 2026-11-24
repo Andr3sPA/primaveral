@@ -96,14 +96,15 @@ test("catalog search and combinable filters have clear accessible names", async 
   assert.match(source, /htmlFor="catalog-search"/);
   assert.match(source, /id="catalog-search"/);
   assert.match(source, /aria-label="Filtros de productos"/);
-  assert.match(
-    source,
-    /legend className="px-1 text-sm font-semibold[^"]*">\s*Grupo/,
-  );
-  assert.match(
-    source,
-    /legend className="px-1 text-sm font-semibold[^"]*">\s*Subgrupo/,
-  );
+  assert.match(source, /label="Grupo"/);
+  assert.match(source, /label="Subgrupo"/);
+  assert.match(source, /label="Disponibilidad"/);
+  assert.match(source, /label="Tallas"/);
+  assert.match(source, /label="Colores"/);
+  assert.match(source, /label="Modalidad"/);
+  assert.match(source, /PopoverTrigger asChild/);
+  assert.match(source, /MultiselectFilter/);
+  assert.match(source, /mb-10[^"]*sm:mb-12/);
   assert.match(source, /aria-live="polite"/);
   assert.match(source, /Limpiar filtros/);
 });
