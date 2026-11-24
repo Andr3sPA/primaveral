@@ -3,6 +3,7 @@ import { MenuItemDetails } from "@/components/menu-item/menu-item-details";
 import { api } from "@/trpc/server";
 import Link from "next/link";
 import { getProductCategoryLabel } from "@/lib/product-categories";
+import { isCatalogProductAvailable } from "@/lib/catalog-filters";
 
 export default async function MenuItemPage({
   params,
@@ -27,20 +28,20 @@ export default async function MenuItemPage({
             }
             prefix={item.currency}
             price={item.price}
-            inStock={item.available && item.stock > 0}
-            stockCount={item.stock}
+            inStock={isCatalogProductAvailable(item)}
+            stockCount={item.stock ?? 0}
             imageUrl={item.image ?? undefined}
-            images={item.images}
+            images={item.images ?? []}
             category={getProductCategoryLabel(
               item.productGroup,
               item.embroiderySubgroup,
             )}
             sizes={item.sizes ?? []}
             colors={item.colors ?? []}
-            fulfillmentType={item.fulfillmentType}
-            leadTimeDays={item.leadTimeDays}
+            fulfillmentType={item.fulfillmentType ?? "READY_TO_SHIP"}
+            leadTimeDays={item.leadTimeDays ?? 0}
             requiresAvailabilityConfirmation={
-              item.requiresAvailabilityConfirmation
+              item.requiresAvailabilityConfirmation ?? false
             }
           />
         </div>

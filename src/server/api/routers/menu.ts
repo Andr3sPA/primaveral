@@ -114,7 +114,6 @@ export const menuRouter = createTRPCRouter({
 
   getPublicMenuItems: publicProcedure.query(({ ctx }) =>
     ctx.db.menuItem.findMany({
-      where: { available: true, stock: { gt: 0 } },
       orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     }),
   ),
