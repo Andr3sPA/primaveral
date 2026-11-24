@@ -23,6 +23,7 @@ export function NavbarClient() {
   const isAdmin = session?.user?.role === "ADMIN";
   const links = [
     { href: "/", label: "Inicio" },
+    { href: "/catalog", label: "Catálogo" },
     { href: "/orders/track", label: "Seguir pedido" },
     { href: "/#contacto", label: "Contacto" },
     ...(isAdmin

@@ -71,7 +71,7 @@ export function MyOrders() {
               Explora la colección para encontrar algo especial.
             </p>
             <Button asChild size="lg" className="min-h-11 text-base">
-              <Link href="/#coleccion">Explorar la colección</Link>
+              <Link href="/catalog">Explorar la colección</Link>
             </Button>
           </CardContent>
         </Card>
