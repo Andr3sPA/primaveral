@@ -21,7 +21,7 @@ test("the public menu keeps administration links behind the admin role", async (
     /isAdmin\s*\?\s*\[[\s\S]*href: "\/menu\/inventory"[\s\S]*href: "\/admin"/,
   );
   assert.match(menuLinks, /href: "\/orders\/track"/);
-  assert.match(orders, /href="\/#coleccion">Explorar la colección/);
+  assert.match(orders, /href="\/catalog">Explorar la colección/);
   assert.match(adminLayout, /await requireAdmin\(\)/);
 });
 
@@ -91,7 +91,7 @@ test("checkout offers cash and enables Wompi only for configured Sandbox", async
 });
 
 test("catalog search and combinable filters have clear accessible names", async () => {
-  const source = await readSource("src/components/main/menu.tsx");
+  const source = await readSource("src/components/catalog.tsx");
 
   assert.match(source, /htmlFor="catalog-search"/);
   assert.match(source, /id="catalog-search"/);
@@ -117,16 +117,13 @@ test("catalog search treats accented and unaccented Spanish words alike", () => 
 });
 
 test("the catalog filters products using their configured group and subgroup", async () => {
-  const source = await readSource("src/components/main/menu.tsx");
+  const source = await readSource("src/components/catalog.tsx");
 
   assert.match(source, /getCatalogFilterOptions\(products\)/);
   assert.match(source, /options\.groups\.includes\(group\.value\)/);
   assert.match(source, /options\.subgroups\.includes\(subgroup\.value\)/);
-  assert.match(
-    source,
-    /filterCatalogProducts\(collectionProducts,\s*filters\)/,
-  );
-  assert.match(source, /\{item\.name\}/);
+  assert.match(source, /filterCatalogProducts\(products,\s*filters\)/);
+  assert.match(source, /<ProductCard key=\{item\.id\} item=\{item\} \/>/);
 });
 
 test("the global navigation makes the cart count and mobile menu accessible", async () => {
@@ -136,6 +133,7 @@ test("the global navigation makes the cart count and mobile menu accessible", as
   ]);
 
   assert.match(source, /Ver carrito, \$\{getItemCount\(\)\}/);
+  assert.match(source, /href: "\/catalog", label: "Catálogo"/);
   assert.match(source, /aria-label="Abrir menú"/);
   assert.match(source, /min-h-11 min-w-11/);
   assert.match(sheet, /min-h-11 min-w-11/);
@@ -156,15 +154,17 @@ test("the global navigation makes the cart count and mobile menu accessible", as
 });
 
 test("the homepage uses the Primaveral brand, readable controls, and sufficient contrast", async () => {
-  const [source, layout, page, footer, navigation] = await Promise.all([
-    readSource("src/components/main/menu.tsx"),
-    readSource("src/app/layout.tsx"),
-    readSource("src/app/page.tsx"),
-    readSource("src/components/site-footer.tsx"),
-    readSource("src/components/navbar-client.tsx"),
-  ]);
+  const [source, catalog, layout, page, footer, navigation] = await Promise.all(
+    [
+      readSource("src/components/main/menu.tsx"),
+      readSource("src/components/catalog.tsx"),
+      readSource("src/app/layout.tsx"),
+      readSource("src/app/page.tsx"),
+      readSource("src/components/site-footer.tsx"),
+      readSource("src/components/navbar-client.tsx"),
+    ],
+  );
 
-  assert.match(source, /Bordados y accesorios/);
   assert.match(source, /Arte que se viste, tradición que perdura\./);
   assert.match(
     source,
@@ -177,12 +177,18 @@ test("the homepage uses the Primaveral brand, readable controls, and sufficient 
   assert.match(source, /src="\/primaveral-floral\.jpg"/);
   assert.match(source, /featuredProduct\.image/);
   assert.doesNotMatch(source, />Favorito</);
-  assert.match(source, /No encontramos prendas con esa búsqueda/);
+  assert.match(source, /Una selección para ti/);
+  assert.match(source, /getHomeProductSelection\(products\)/);
+  assert.match(source, /href="\/catalog"/);
+  assert.doesNotMatch(
+    source,
+    /Ver todos los productos|catalog-search|Filtros de productos/,
+  );
+  assert.match(catalog, /No encontramos prendas con esa búsqueda/);
   assert.doesNotMatch(source, /Nueva temporada|pieza 01 \/ 04/);
   assert.match(source, /min-h-11[^"]*text-base/);
   assert.match(source, /bg-\[#48235c\]/);
   assert.match(source, /text-white/);
-  assert.match(source, /búsqueda/);
   assert.match(layout, /lang="es"/);
   assert.match(layout, /src: "\.\/fonts\/dm-sans\.woff2"/);
   assert.match(layout, /src: "\.\/fonts\/cormorant-garamond\.woff2"/);
@@ -237,14 +243,9 @@ test("the homepage logo stays visible independently of the featured product", as
   assert.ok(heroEnd > heroStart);
   assert.match(hero, /src="\/primaveral-floral\.jpg"/);
   assert.doesNotMatch(hero, /featuredProduct/);
-  assert.match(
-    source,
-    /aria-label="Producto destacado"[\s\S]*?featuredProduct\.image/,
-  );
-  assert.match(
-    source,
-    /collectionProducts\s*=\s*useMemo[\s\S]*?item\.id\s*!==\s*featuredProduct\.id/,
-  );
+  assert.match(source, /aria-labelledby="featured-product-title"/);
+  assert.match(source, /href=\{`\/menu\/\$\{featuredProduct\.id\}`\}/);
+  assert.match(source, /featuredProduct\.image/);
   assert.doesNotMatch(source, /Bordados hechos a mano en Cartago/);
   assert.doesNotMatch(source, /Primaveral Bordados de Cartago/);
   assert.match(source, /src="\/primaveral-flower\.png"/);

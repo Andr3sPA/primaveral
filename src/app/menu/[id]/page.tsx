@@ -53,7 +53,7 @@ export default async function MenuItemPage({
             Vuelve a la colección para ver las prendas disponibles.
           </p>
           <Link
-            href="/#coleccion"
+            href="/catalog"
             className="mt-6 inline-flex min-h-11 items-center rounded-full bg-stone-900 px-6 text-white"
           >
             Volver a la colección
