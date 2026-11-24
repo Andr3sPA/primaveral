@@ -145,17 +145,15 @@ por Cloudinary en el servidor y solo se guarda en Neon la URL `secure_url`.
 Nunca se suben credenciales al navegador ni se guardan imágenes dentro del
 repositorio. El endpoint acepta únicamente JPG, PNG y WebP de hasta 8 MB.
 
-### Publicación automática en Facebook e Instagram
+### Publicación manual en Facebook e Instagram
 
-La publicación automática se configura desde `/admin/social` y permanece
-desactivada hasta que un administrador la habilite por plataforma. Cada
-producto se publica siempre en la página web y puede optar por Facebook,
-Instagram, ambas redes o ninguna mediante opciones independientes, desactivadas
-por defecto. Solo se encola al crear un producto elegible, en su primera
-transición a disponible con stock, o al activar explícitamente un canal. Las
-ediciones normales no crean trabajos y activar una plataforma no hace backfill
-de productos sin opt-in. Desactivar un canal cancela solo los trabajos de ese
-canal que aún no comenzaron; cada plataforma conserva su propio estado. La cola
+La publicación social permanece desactivada al crear o editar un producto.
+Desde el inventario, «Publicar en redes...» pregunta en cada ocasión qué
+plataformas usar y permite redactar la descripción y los hashtags. La cola
+reutiliza la primera foto ya asociada al producto; no genera ni sube imágenes ni
+añade texto automático. Las plataformas deben habilitarse primero desde
+`/admin/social`. Cada solicitud crea trabajos independientes para las redes
+seleccionadas y puede repetirse después de una publicación anterior. La cola
 se procesa mediante el workflow
 `.github/workflows/social-publications.yml` de GitHub Actions, que llama al
 endpoint protegido cada cinco minutos (en los minutos 3, 8, ..., 58 UTC). El
@@ -165,8 +163,8 @@ durante periodos de alta carga, por lo que no se garantiza una hora exacta.
 Esto evita el límite de cron diario de Vercel Hobby; si se vuelve a configurar
 este schedule como Vercel Cron, se requiere un plan Pro o Enterprise según la
 [documentación de Vercel](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing).
-La creación del producto solo guarda el producto y encola sus trabajos en la
-base de datos; no espera a Meta ni al worker. La ejecución manual de
+La solicitud de publicación solo encola los trabajos en la base de datos; no
+espera a Meta ni al worker. La ejecución manual de
 `workflow_dispatch` también procesa publicaciones reales.
 
 Se evaluó disparar el worker con Next.js `after()` desde el Route Handler de

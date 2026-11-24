@@ -32,6 +32,7 @@ Las migraciones incrementales posteriores son:
 | `20261115100000_per_platform_social_targets`       | Reemplaza el opt-in único con las opciones independientes de Facebook e Instagram, preservando los opt-ins existentes.                                                                                                     |
 | `20261121100000_product_availability_and_gallery`  | Agrega `MenuItem.requiresAvailabilityConfirmation` y `MenuItem.images`, usados por el catálogo de productos.                                                                                                               |
 | `20261122150000_product_groups`                    | Reemplaza la categoría libre por grupo y subgrupo; conserva las categorías bordadas reconocidas y clasifica las demás como No bordados.                                                                                    |
+| `20261123200000_manual_social_publications`        | Elimina el opt-in automático por producto, cancela sus publicaciones pendientes y permite varias publicaciones por producto y plataforma.                                                                                  |
 
 Las migraciones de pedidos agregan columnas opcionales y relajan restricciones;
 no eliminan filas. La primera también reemplaza la FK de `Order.userId`. La

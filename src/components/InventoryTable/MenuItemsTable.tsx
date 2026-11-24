@@ -32,6 +32,7 @@ import TableErrorState from "@/components/TableErrorState";
 import TableWrapper from "@/components/TableWrapper";
 import MenuItemImage from "./MenuItemImage";
 import EditMenuItemDialog from "./EditMenuItemDialog";
+import PublishProductDialog from "./PublishProductDialog";
 import DeleteMenuItemDialog from "./DeleteMenuItemDialog";
 import type { MenuItem } from "@prisma/client";
 import { toast } from "sonner";
@@ -270,6 +271,7 @@ export function MenuItemsTable() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <PublishProductDialog menuItem={menuItem} />
                 <EditMenuItemDialog menuItem={menuItem} />
                 <DropdownMenuItem
                   onClick={() => {

@@ -45,7 +45,7 @@ export default function AdminPage() {
       href: "/admin/social",
       icon: Share2,
       title: "Redes sociales",
-      description: "Publicación automática y estados",
+      description: "Publicación social manual y estados",
       value: "Facebook e Instagram",
     },
     {

@@ -15,7 +15,6 @@ import {
   publicationPayloadSchema,
   PublicationInputError,
 } from "@/server/social/publishing";
-import { isProductSocialTargetEnabled } from "@/lib/social-targets";
 
 const BATCH_SIZE = 2;
 const MAX_ATTEMPTS = 24;
@@ -190,18 +189,11 @@ export async function processDuePublications(db: PrismaClient) {
     const product = await db.menuItem.findUnique({
       where: { id: job.menuItemId },
       select: {
-        autoPublishToFacebook: true,
-        autoPublishToInstagram: true,
         available: true,
         stock: true,
       },
     });
-    if (
-      !product ||
-      !isProductSocialTargetEnabled(product, job.platform) ||
-      !product.available ||
-      product.stock <= 0
-    ) {
+    if (!product || !product.available || product.stock <= 0) {
       await updateClaimed(db, job.id, leaseToken, {
         status: ProductPublicationStatus.CANCELLED,
       });
