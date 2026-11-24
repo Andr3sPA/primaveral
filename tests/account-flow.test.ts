@@ -22,8 +22,7 @@ const { createCaller } = await import("../src/server/api/root");
 const { createOrderInputSchema } = await import(
   "../src/server/api/routers/order"
 );
-const { productInputSchema, getPlatformsToCancel, getPlatformsToEnqueue } =
-  await import("../src/server/api/routers/menu");
+const { productInputSchema } = await import("../src/server/api/routers/menu");
 
 type TestUser = {
   id: string;
@@ -1230,109 +1229,18 @@ test("product names preserve Spanish accents and ñ through API validation", () 
   assert.equal(product.name.includes("?"), false);
 });
 
-test("social publication targets independently cover all website combinations", () => {
-  const product = {
-    autoPublishToFacebook: false,
-    autoPublishToInstagram: false,
-    available: true,
-    stock: 3,
-  };
-  const combinations = [
-    { name: "website only", targets: {}, expected: [] },
-    {
-      name: "website and Facebook",
-      targets: { autoPublishToFacebook: true },
-      expected: ["FACEBOOK"],
-    },
-    {
-      name: "website and Instagram",
-      targets: { autoPublishToInstagram: true },
-      expected: ["INSTAGRAM"],
-    },
-    {
-      name: "website and both networks",
-      targets: {
-        autoPublishToFacebook: true,
-        autoPublishToInstagram: true,
-      },
-      expected: ["FACEBOOK", "INSTAGRAM"],
-    },
-  ] as const;
-
-  for (const combination of combinations) {
-    assert.deepEqual(
-      getPlatformsToEnqueue(null, { ...product, ...combination.targets }),
-      combination.expected,
-      combination.name,
-    );
-  }
-});
-
-test("social publication queues only newly selected targets and eligible products", () => {
-  const eligible = {
+test("product registration never opts into automatic social publication", () => {
+  const product = productInputSchema.parse({
+    name: "Blusa bordada",
+    price: 250000,
+    productGroup: "BORDADOS",
+    embroiderySubgroup: "BLUSAS",
     autoPublishToFacebook: true,
     autoPublishToInstagram: true,
-    available: true,
-    stock: 3,
-  };
-  const unavailable = { ...eligible, available: false };
-  const outOfStock = { ...eligible, stock: 0 };
-  const facebookOnly = {
-    ...eligible,
-    autoPublishToInstagram: false,
-  };
-  const noTargets = {
-    autoPublishToFacebook: false,
-    autoPublishToInstagram: false,
-    available: true,
-    stock: 3,
-  };
+  });
 
-  assert.deepEqual(getPlatformsToEnqueue(noTargets, noTargets), []);
-  assert.deepEqual(getPlatformsToEnqueue(unavailable, eligible), [
-    "FACEBOOK",
-    "INSTAGRAM",
-  ]);
-  assert.deepEqual(getPlatformsToEnqueue(outOfStock, eligible), [
-    "FACEBOOK",
-    "INSTAGRAM",
-  ]);
-  assert.deepEqual(getPlatformsToEnqueue(facebookOnly, eligible), [
-    "INSTAGRAM",
-  ]);
-  assert.deepEqual(getPlatformsToEnqueue(eligible, eligible), []);
-  assert.deepEqual(
-    getPlatformsToEnqueue({ ...eligible, stock: 2 }, { ...eligible, stock: 4 }),
-    [],
-  );
-});
-
-test("disabling a channel cancels only its work; lost eligibility cancels selected channels", () => {
-  const eligible = {
-    autoPublishToFacebook: true,
-    autoPublishToInstagram: true,
-    available: true,
-    stock: 3,
-  };
-
-  assert.deepEqual(
-    getPlatformsToCancel(eligible, {
-      ...eligible,
-      autoPublishToFacebook: false,
-    }),
-    ["FACEBOOK"],
-  );
-  assert.deepEqual(
-    getPlatformsToCancel(eligible, {
-      ...eligible,
-      available: false,
-    }),
-    ["FACEBOOK", "INSTAGRAM"],
-  );
-  assert.deepEqual(
-    getPlatformsToCancel(eligible, { ...eligible, stock: 2 }),
-    [],
-  );
+  assert.equal("autoPublishToFacebook" in product, false);
+  assert.equal("autoPublishToInstagram" in product, false);
 });
 
 test("a Brevo failure does not leave a usable account verification link", async () => {

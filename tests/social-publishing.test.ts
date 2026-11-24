@@ -41,13 +41,23 @@ const payload = {
 
 test("publication keys are stable per product and platform", () => {
   assert.equal(
-    createPublicationIdempotencyKey("product-1", "FACEBOOK"),
-    "product:product-1:FACEBOOK",
+    createPublicationIdempotencyKey("product-1", "FACEBOOK", "post-1"),
+    "product:product-1:FACEBOOK:post-1",
   );
   assert.notEqual(
-    createPublicationIdempotencyKey("product-1", "FACEBOOK"),
-    createPublicationIdempotencyKey("product-1", "INSTAGRAM"),
+    createPublicationIdempotencyKey("product-1", "FACEBOOK", "post-1"),
+    createPublicationIdempotencyKey("product-1", "INSTAGRAM", "post-1"),
   );
+  assert.notEqual(
+    createPublicationIdempotencyKey("product-1", "FACEBOOK", "post-1"),
+    createPublicationIdempotencyKey("product-1", "FACEBOOK", "post-2"),
+  );
+});
+
+test("custom publication text and hashtags are used verbatim", () => {
+  const caption = "Nueva colección 🌿\n\n#Primaveral #HechoAMano";
+
+  assert.equal(createPublicationCaption({ ...payload, caption }), caption);
 });
 
 test("Meta page token prefers META_PAGE_ACCESS_TOKEN and accepts META_ACCESS_TOKEN", () => {
@@ -221,6 +231,37 @@ test("Facebook publishes through the versioned Page API without putting the toke
     new URLSearchParams(requestBody).get("caption") ?? "",
     /Pídelo por WhatsApp/,
   );
+});
+
+test("Facebook and Instagram publish the custom caption without generated product copy", async () => {
+  const bodies: string[] = [];
+  const responses = [
+    { id: "photo-id", post_id: "post-id" },
+    { id: "container-id" },
+  ];
+  const publisher = createMetaPublisher(
+    {
+      pageId: "page-id",
+      instagramUserId: "instagram-id",
+      accessToken: "test-token",
+      graphApiVersion: "v27.0",
+    },
+    async (_input, init) => {
+      bodies.push(String(init?.body));
+      return Response.json(responses.shift() ?? {});
+    },
+  );
+  const customCaption = "Lanzamiento especial\n\n#Primaveral #HechoAMano";
+
+  await publisher.publishFacebook({ ...payload, caption: customCaption });
+  await publisher.createInstagramContainer({
+    ...payload,
+    caption: customCaption,
+  });
+
+  assert.equal(new URLSearchParams(bodies[0]).get("caption"), customCaption);
+  assert.equal(new URLSearchParams(bodies[1]).get("caption"), customCaption);
+  assert.doesNotMatch(bodies.join("&"), /Pídelo por WhatsApp/);
 });
 
 test("Facebook text-only posts use the Page feed message parameter", async () => {

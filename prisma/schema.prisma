@@ -80,8 +80,6 @@ model MenuItem {
   colors                           String[]             @default([])
   stock                            Int                  @default(0)
   featured                         Boolean              @default(false)
-  autoPublishToFacebook            Boolean              @default(false)
-  autoPublishToInstagram           Boolean              @default(false)
   fulfillmentType                  FulfillmentType      @default(READY_TO_SHIP)
   leadTimeDays                     Int                  @default(0)
   requiresAvailabilityConfirmation Boolean              @default(false)
@@ -156,7 +154,6 @@ model ProductPublication {
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
 
-  @@unique([menuItemId, platform])
   @@index([status, nextAttemptAt])
   @@index([leaseExpiresAt])
 }

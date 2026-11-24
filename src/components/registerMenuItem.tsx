@@ -38,8 +38,6 @@ const schema = z
       .nullable(),
     price: z.coerce.number().positive(),
     stock: z.coerce.number().int().min(0),
-    autoPublishToFacebook: z.boolean(),
-    autoPublishToInstagram: z.boolean(),
     sizes: z.string().optional(),
     colors: z.string().optional(),
     fulfillmentType: z.enum(["READY_TO_SHIP", "SOURCED_TO_ORDER"]),
@@ -68,8 +66,6 @@ export default function RegisterMenuItem() {
       productGroup: "BORDADOS",
       embroiderySubgroup: "BLUSAS",
       stock: 1,
-      autoPublishToFacebook: false,
-      autoPublishToInstagram: false,
       sizes: "S, M, L",
       colors: "",
       fulfillmentType: "READY_TO_SHIP",
@@ -242,46 +238,6 @@ export default function RegisterMenuItem() {
               </FormItem>
             )}
           />
-          <div className="space-y-3 sm:col-span-2">
-            <p className="text-sm font-medium">
-              El producto se publicará en la página web. Selecciona también las
-              redes sociales que quieras usar:
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(
-                [
-                  ["autoPublishToFacebook", "Facebook"],
-                  ["autoPublishToInstagram", "Instagram"],
-                ] as const
-              ).map(([name, label]) => (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name}
-                  render={({ field }) => (
-                    <FormItem className="flex items-start gap-3 rounded-md border p-4">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={(event) =>
-                            field.onChange(event.currentTarget.checked)
-                          }
-                          className="border-input accent-primary mt-1 size-4 rounded"
-                        />
-                      </FormControl>
-                      <div className="space-y-1">
-                        <FormLabel>Auto-publicar en {label}</FormLabel>
-                        <p className="text-muted-foreground text-xs">
-                          Requiere que {label} esté activado en el panel social.
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </div>
-          </div>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField

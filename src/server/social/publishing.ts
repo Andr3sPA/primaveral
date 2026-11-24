@@ -4,6 +4,7 @@ import type { MenuItem, PublicationPlatform } from "@prisma/client";
 import { z } from "zod";
 import { env } from "@/env";
 import { WHATSAPP_CHAT_URL } from "@/lib/social-links";
+import { randomUUID } from "node:crypto";
 
 export { WHATSAPP_CHAT_URL };
 
@@ -15,6 +16,7 @@ export const publicationPayloadSchema = z.object({
   imageUrl: z.string().url().nullable(),
   productUrl: z.string().url(),
   whatsappUrl: z.string().url(),
+  caption: z.string().max(2200).optional(),
 });
 
 export type PublicationPayload = z.infer<typeof publicationPayloadSchema>;
@@ -22,8 +24,9 @@ export type PublicationPayload = z.infer<typeof publicationPayloadSchema>;
 export function createPublicationIdempotencyKey(
   menuItemId: string,
   platform: PublicationPlatform,
+  publicationId: string = randomUUID(),
 ) {
-  return `product:${menuItemId}:${platform}`;
+  return `product:${menuItemId}:${platform}:${publicationId}`;
 }
 
 /**
@@ -135,6 +138,7 @@ export function createPublicationPayload(
     "id" | "name" | "description" | "price" | "currency" | "image"
   >,
   appUrl = env.APP_URL,
+  caption?: string,
 ): PublicationPayload {
   if (!appUrl) {
     throw new Error("APP_URL es necesario para publicar productos.");
@@ -152,11 +156,13 @@ export function createPublicationPayload(
       origin,
     ).toString(),
     whatsappUrl: WHATSAPP_CHAT_URL,
+    ...(caption === undefined ? {} : { caption }),
   };
   return publicationPayloadSchema.parse(payload);
 }
 
 export function createPublicationCaption(payload: PublicationPayload) {
+  if (payload.caption !== undefined) return payload.caption;
   const description = payload.description.trim();
   const price = `${payload.currency}${payload.price.toLocaleString("es-CO")}`;
   const lines = [

@@ -1,13 +1,31 @@
 import { ProductPublicationStatus, PublicationPlatform } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { env } from "@/env";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
 import {
+  createPublicationIdempotencyKey,
   createPublicationPayload,
   getMetaEnvironment,
 } from "@/server/social/publishing";
-import { isProductSocialTargetEnabled } from "@/lib/social-targets";
+import { getProductImages } from "@/lib/product-images";
+
+const publishInputSchema = z
+  .object({
+    menuItemId: z.string().cuid(),
+    platforms: z.array(z.nativeEnum(PublicationPlatform)).min(1).max(2),
+    caption: z.string().max(2200),
+  })
+  .superRefine(({ platforms }, context) => {
+    if (new Set(platforms).size !== platforms.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["platforms"],
+        message: "No repitas la misma plataforma.",
+      });
+    }
+  });
 
 export const publicationRouter = createTRPCRouter({
   getStatus: adminProcedure.query(async ({ ctx }) => {
@@ -31,8 +49,6 @@ export const publicationRouter = createTRPCRouter({
           menuItem: {
             select: {
               name: true,
-              autoPublishToFacebook: true,
-              autoPublishToInstagram: true,
             },
           },
         },
@@ -60,6 +76,77 @@ export const publicationRouter = createTRPCRouter({
       publications,
     };
   }),
+
+  publish: adminProcedure
+    .input(publishInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const item = await ctx.db.menuItem.findUnique({
+        where: { id: input.menuItemId },
+      });
+      if (!item) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No encontramos este producto.",
+        });
+      }
+      if (!item.available || item.stock <= 0) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "El producto debe estar disponible y tener stock para publicarse.",
+        });
+      }
+
+      const imageUrl = getProductImages(item.image, item.images)[0];
+      if (!imageUrl) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Añade una foto al producto antes de publicarlo en redes.",
+        });
+      }
+
+      const settings = await ctx.db.socialPublishingSettings.findUnique({
+        where: { id: "primary" },
+      });
+      for (const platform of input.platforms) {
+        const enabled =
+          platform === PublicationPlatform.FACEBOOK
+            ? settings?.facebookEnabled
+            : settings?.instagramEnabled;
+        if (!enabled) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Activa ${platform === PublicationPlatform.FACEBOOK ? "Facebook" : "Instagram"} en el panel social antes de publicar.`,
+          });
+        }
+        const configuration = getMetaEnvironment(platform);
+        if (!configuration.configured) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Configura estas variables del servidor: ${configuration.missing.join(", ")}.`,
+          });
+        }
+      }
+
+      const payload = createPublicationPayload(
+        { ...item, image: imageUrl },
+        undefined,
+        input.caption,
+      );
+      await ctx.db.productPublication.createMany({
+        data: input.platforms.map((platform) => ({
+          menuItemId: item.id,
+          platform,
+          idempotencyKey: createPublicationIdempotencyKey(
+            item.id,
+            platform,
+            randomUUID(),
+          ),
+          payload,
+        })),
+      });
+      return { queued: input.platforms.length };
+    }),
 
   setEnabled: adminProcedure
     .input(
@@ -110,12 +197,6 @@ export const publicationRouter = createTRPCRouter({
             select: {
               id: true,
               name: true,
-              description: true,
-              price: true,
-              currency: true,
-              image: true,
-              autoPublishToFacebook: true,
-              autoPublishToInstagram: true,
               available: true,
               stock: true,
             },
@@ -159,19 +240,6 @@ export const publicationRouter = createTRPCRouter({
             "El producto debe estar disponible y tener stock para publicarse.",
         });
       }
-      if (
-        !isProductSocialTargetEnabled(
-          publication.menuItem,
-          publication.platform,
-        )
-      ) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message:
-            "Activa la auto-publicación de este producto antes de reintentar.",
-        });
-      }
-
       const reuseContainer =
         Boolean(publication.externalContainerId) &&
         !publication.lastErrorCode?.startsWith("CONTAINER_");
@@ -189,9 +257,6 @@ export const publicationRouter = createTRPCRouter({
           externalContainerId: reuseContainer
             ? publication.externalContainerId
             : null,
-          ...(!reuseContainer
-            ? { payload: createPublicationPayload(publication.menuItem) }
-            : {}),
           lastErrorCode: null,
           lastErrorMessage: null,
         },

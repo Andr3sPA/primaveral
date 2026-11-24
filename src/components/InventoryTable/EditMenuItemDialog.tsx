@@ -53,12 +53,6 @@ export default function EditMenuItemDialog({
     requiresAvailabilityConfirmation,
     setRequiresAvailabilityConfirmation,
   ] = React.useState(menuItem.requiresAvailabilityConfirmation);
-  const [autoPublishToFacebook, setAutoPublishToFacebook] = React.useState(
-    menuItem.autoPublishToFacebook,
-  );
-  const [autoPublishToInstagram, setAutoPublishToInstagram] = React.useState(
-    menuItem.autoPublishToInstagram,
-  );
   const [fulfillmentType, setFulfillmentType] = React.useState(
     menuItem.fulfillmentType,
   );
@@ -96,8 +90,6 @@ export default function EditMenuItemDialog({
       colors: menuItem.colors,
       stock: menuItem.stock,
       featured: menuItem.featured,
-      autoPublishToFacebook,
-      autoPublishToInstagram,
       fulfillmentType,
       leadTimeDays: parseInt(leadTimeDays, 10),
       requiresAvailabilityConfirmation,
@@ -212,47 +204,6 @@ export default function EditMenuItemDialog({
                 </select>
               </div>
             )}
-          </div>
-          <div className="space-y-3">
-            <p className="text-sm font-medium">
-              El producto siempre se muestra en la página web. Redes sociales:
-            </p>
-            {(
-              [
-                [
-                  "autoPublishToFacebook",
-                  "Facebook",
-                  autoPublishToFacebook,
-                  setAutoPublishToFacebook,
-                ],
-                [
-                  "autoPublishToInstagram",
-                  "Instagram",
-                  autoPublishToInstagram,
-                  setAutoPublishToInstagram,
-                ],
-              ] as const
-            ).map(([id, label, checked, setChecked]) => (
-              <div
-                key={id}
-                className="flex items-start gap-3 rounded-md border p-3"
-              >
-                <input
-                  id={id}
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) => setChecked(event.currentTarget.checked)}
-                  className="border-input accent-primary mt-1 size-4 rounded"
-                />
-                <div className="space-y-1">
-                  <Label htmlFor={id}>Auto-publicar en {label}</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Requiere {label} activado en el panel social. Al
-                    desactivarlo se cancelan los trabajos pendientes de esa red.
-                  </p>
-                </div>
-              </div>
-            ))}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
